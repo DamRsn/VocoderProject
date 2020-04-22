@@ -11,7 +11,8 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "iostream"
+#include <iostream>
+#include <assert.h>
 
 
 class MyBuffer
@@ -29,6 +30,14 @@ public:
     float getSynthSample(int channel, int idx);
 
     void addOutSample(int channel, int idx, float value);
+    float getOutSample(int channel, int idx);
+
+    int getSamplesPerBlock() const{return samplesPerBlock;}
+    int getLatency() const{return latency;}
+    int getNumChannels() const{return numChannels;}
+
+    void clearOutput(int channel, int numSamples);
+
 
 
 private:
@@ -54,8 +63,5 @@ private:
     AudioBuffer<float> mInputVoice;
     AudioBuffer<float> mInputSynth;
     AudioBuffer<float> mOutput;
-
-
-
 
 };

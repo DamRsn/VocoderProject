@@ -14,9 +14,12 @@
 #include "maximilian.h"
 #include "SynthSound.h"
 #include "SynthVoice.h"
-#include <valarray>
 #include "add_func.h"
 #include "MyBuffer.h"
+#include "VocoderProcess.h"
+#include <string>
+#include <math.h>
+
 
 //==============================================================================
 /**
@@ -68,11 +71,14 @@ private:
     
     AudioBuffer<float> synthBuffer;
 
+    // To handle the variable buffer size and latency
     MyBuffer myBuffer;
 
-    //dsp::WindowingFunction<float> window; // [5]
-    float* window;
-    
+    // Class with process function
+    VocoderProcess vocoderProcess;
+
+    int k;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VocoderAudioProcessor)
 };

@@ -112,27 +112,47 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
+    int wlen = 256;
+    int hop = 128;
+    std::string window_str = "hann";
+    
     int samplesToKeep = 0;
-    int latency = (int(128/samplesPerBlock) + 1) * samplesPerBlock;
+    int latency;
+    
+    if(samplesPerBlock<= hop)
+        latency = wlen - samplesPerBlock;
+    else
+        latency = wlen;
+    
+    // latency = int(ceil(128.0/double(samplesPerBlock))) * samplesPerBlock;
 
-    std::cout << "samplesToKeep" << samplesToKeep << std::endl;
-    std::cout << "latency" << latency << std::endl;
-    std::cout << "inputchannels" << totalNumInputChannels << std::endl;
-    std::cout << "outputchannels" << totalNumOutputChannels << std::endl;
+    std::cout << "\nbuffersize:  " << samplesPerBlock << std::endl;
+    std::cout << "inSize:  " << samplesPerBlock + samplesToKeep + latency << std::endl;
+    std::cout << "samplesToKeep:  " << samplesToKeep << std::endl;
+    std::cout << "latency:  " << latency << std::endl;
+    std::cout << "wlen:  " << wlen << std::endl;
+    std::cout << "hop:  " << hop << std::endl;
 
     
+
+    vocoderProcess.prepare(wlen, hop, window_str);
+
     myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, getTotalNumInputChannels());
-    
-    window = new float[256];
-    
-    dsp::WindowingFunction<float>::fillWindowingTables(window, 256, dsp::WindowingFunction<float>::hann);
+
     setLatencySamples(latency);
+
+    k = 0;
+
+    /*
+    for (int i=0; i < wlen; i++)
+    {
+        std::cout<< vocoderProcess.window[i] << ", ";
+    }
+    */
 }
 
 void VocoderAudioProcessor::releaseResources()
 {
-    // When playback stops, you can use this as an opportunity to free up any
-    // spare memory, etc.
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -169,33 +189,18 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-    
-    /*
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
 
-        // ..do something to the data...
-    }
-    */
-
-    float value;
     synthBuffer.clear();
     mySynth.renderNextBlock(synthBuffer, midiMessages, 0, synthBuffer.getNumSamples());
 
     myBuffer.fillInputBuffers(buffer, synthBuffer);
 
-    for (int channel = 0; channel < totalNumOutputChannels; channel++)
-    {
-        for (int i = 0; i < samplesPerBlock; i++)
-        {
-            value = myBuffer.getSynthSample(channel, i) + myBuffer.getVoiceSample(channel, i);
-            myBuffer.addOutSample(channel, i, value);
-        }
-    }
+    vocoderProcess.process(myBuffer);
 
     myBuffer.fillOutputBuffer(buffer);
-
+    
+    
+    
 }
 
 //==============================================================================
