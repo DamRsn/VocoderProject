@@ -115,7 +115,10 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     int wlen = 256;
     int hop = 128;
     std::string window_str = "hann";
-    
+    int order = 15;
+    int orderMax = 30;
+
+
     int samplesToKeep = 0;
     int latency;
     
@@ -132,23 +135,14 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     std::cout << "latency:  " << latency << std::endl;
     std::cout << "wlen:  " << wlen << std::endl;
     std::cout << "hop:  " << hop << std::endl;
+    std::cout << "order:  " << order << std::endl;
 
-    
-
-    vocoderProcess.prepare(wlen, hop, window_str);
+    vocoderProcess.prepare(wlen, hop, order, orderMax, window_str);
 
     myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, getTotalNumInputChannels());
 
     setLatencySamples(latency);
 
-    k = 0;
-
-    /*
-    for (int i=0; i < wlen; i++)
-    {
-        std::cout<< vocoderProcess.window[i] << ", ";
-    }
-    */
 }
 
 void VocoderAudioProcessor::releaseResources()
@@ -198,8 +192,6 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     vocoderProcess.process(myBuffer);
 
     myBuffer.fillOutputBuffer(buffer);
-    
-    
     
 }
 

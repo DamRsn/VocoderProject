@@ -26,11 +26,11 @@ public:
     void fillInputBuffers(const AudioBuffer<float>& voiceBuffer, const AudioBuffer<float>& synthBuffer);
     void fillOutputBuffer(AudioBuffer<float>& buffer);
 
-    float getVoiceSample(int channel, int idx);
-    float getSynthSample(int channel, int idx);
+    float getVoiceSample(int channel, int idx) const;
+    float getSynthSample(int channel, int idx) const;
 
     void addOutSample(int channel, int idx, float value);
-    float getOutSample(int channel, int idx);
+    float getOutSample(int channel, int idx) const;
 
     int getSamplesPerBlock() const{return samplesPerBlock;}
     int getLatency() const{return latency;}

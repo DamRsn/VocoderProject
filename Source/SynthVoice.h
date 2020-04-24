@@ -12,6 +12,7 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "SynthSound.h"
 #include "maximilian.h"
+#include <iostream>
 
 class SynthVoice : public SynthesiserVoice
 {
@@ -24,7 +25,10 @@ public:
     void startNote (int midiNoteNumber, float velocity, SynthesiserSound *sound, int currentPitchWheelPosition) override
     {
         env1.trigger = 1;
-        level = velocity;
+
+        // Todo: deal with velocity in a better way
+        level = 0.2;
+
         frequency = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
     }
     
@@ -49,10 +53,10 @@ public:
     
     void renderNextBlock (AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override
     {
-        env1.setAttack(100);
-        env1.setDecay(400);
-        env1.setSustain(0.8);
-        env1.setRelease(400);
+        env1.setAttack(200);
+        env1.setDecay(1000);
+        env1.setSustain(0.9);
+        env1.setRelease(600);
         
         for (int sample = 0; sample < numSamples; sample++)
         {

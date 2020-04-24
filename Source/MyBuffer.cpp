@@ -53,7 +53,6 @@ void MyBuffer::prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, d
     inCounter = samplesToKeep + latency;
     outCounter = 0;
     currCounter = samplesToKeep;
-
 }
 
 
@@ -103,7 +102,7 @@ void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer)
 }
 
 
-float MyBuffer::getVoiceSample(int channel, int idx)
+float MyBuffer::getVoiceSample(int channel, int idx) const
 {
     if (idx < -samplesToKeep || idx >= (samplesPerBlock + latency))
     {
@@ -116,7 +115,7 @@ float MyBuffer::getVoiceSample(int channel, int idx)
 }
 
 
-float MyBuffer::getSynthSample(int channel, int idx)
+float MyBuffer::getSynthSample(int channel, int idx) const
 {
     if (idx < -samplesToKeep || idx >= (samplesPerBlock + latency))
     {
@@ -140,7 +139,7 @@ void MyBuffer::addOutSample(int channel, int idx, float value)
 }
 
 
-float MyBuffer::getOutSample(int channel, int idx)
+float MyBuffer::getOutSample(int channel, int idx) const
 {
     if (idx < 0 || idx >= (outSize))
     {

@@ -77,8 +77,6 @@ private:
     // Class with process function
     VocoderProcess vocoderProcess;
 
-    int k;
-
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VocoderAudioProcessor)
 };
