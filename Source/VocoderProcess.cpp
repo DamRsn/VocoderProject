@@ -9,20 +9,27 @@
 */
 
 #include "VocoderProcess.h"
+#include "PluginProcessor.h"
+#define PI 3.14159265
 
-VocoderProcess::VocoderProcess() {    
+
+VocoderProcess::VocoderProcess(){}
+
+void VocoderProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
+{
+    this->audioProcPtr = audioProcPtr;
 }
 
 void VocoderProcess::prepare(int wlen_, int hop_, int order_, int orderMax_, std::string windowType) {
-
-    wlen = wlen_;
+    std::cout.precision(3);
+    this->wlen = wlen_;
     hop = hop_;
     startSample = 0;
     window.resize(wlen, 0.0);
     k_iter = 0;
     order = order_;
     orderMax = orderMax_;
-    meanAbsE = 34;
+    meanAbsE = 0.0;
 
     r.resize(orderMax + 1, 1.0);
     a.resize(orderMax + 1, 1.0);
@@ -31,9 +38,40 @@ void VocoderProcess::prepare(int wlen_, int hop_, int order_, int orderMax_, std
     e.resize(wlen, 0.0);
     out.resize(wlen, 0.0);
 
+    float overlap = float((wlen-hop))/float(wlen);
+
+    float overlapFactor = 1.0;
+
+    if (abs(overlap - 0.75)< pow(10, -10))
+    {
+        overlapFactor = 1/sqrt(2);
+    }
+
+    if (abs(overlap - 0.75) > pow(10, -10) &&
+        abs(overlap - 0.5) > pow(10, -10))
+    {
+        std::cout << "Invalid overlap" << std::endl;
+        assert(false);
+    }
 
     if (windowType=="hann")
-        dsp::WindowingFunction<float>::fillWindowingTables(&window[0], wlen, dsp::WindowingFunction<float>::hann, false);
+    {
+        dsp::WindowingFunction<float>::fillWindowingTables(&window[0], wlen,
+                dsp::WindowingFunction<float>::hann,false);
+        for (int i = 0; i < wlen; i++)
+        {
+            window[i] *= overlapFactor;
+        }
+    }
+
+    else if (windowType=="sine")
+    {
+        for (int i = 0; i < wlen; i++)
+        {
+            window[i] = overlapFactor * sin((i+0.5)*PI/float(wlen));
+        }
+    }
+
     else
     {
         std::cout << "Unknown window type" << std::endl;
@@ -44,18 +82,11 @@ void VocoderProcess::prepare(int wlen_, int hop_, int order_, int orderMax_, std
 VocoderProcess::~VocoderProcess() {}
 
 
-void VocoderProcess::lpc(const MyBuffer &myBuffer, const int order)
-{
-    biaisedAutoCorr(myBuffer, r);
-    levinsonDurbin(r, a, a_prev);
-}
-
-
 void VocoderProcess::setOrder(int newOrder)
 {
     if (newOrder > orderMax)
     {
-        std::cerr << "newOrder for LPC is larger than OrderMax" << std::endl;
+        std::cout << "newOrder for LPC is larger than OrderMax" << std::endl;
         assert(false);
     }
 
@@ -72,14 +103,14 @@ void VocoderProcess::process(MyBuffer &myBuffer)
 
     startSample -= myBuffer.getSamplesPerBlock();
     k_iter+=1;
-    k_iter%=200;
+    k_iter%=1000000;
 }
 
 void VocoderProcess::processWindow(MyBuffer &myBuffer)
 {
     int numChannels = myBuffer.getNumChannels();
-    float value;
     /*
+    float value;
     for (int channel = 0; channel < numChannels; channel++)
     {
         for (int i = startSample; i < (startSample + wlen); i++)
@@ -92,35 +123,44 @@ void VocoderProcess::processWindow(MyBuffer &myBuffer)
     */
     
     lpc(myBuffer, order);
-    filter_FIR(myBuffer, a);
-    filter_IIR(myBuffer, a);
+    filter_FIR(myBuffer, a, order);
+    filter_IIR(myBuffer, a, order);
 
 }
 
 
-void VocoderProcess::biaisedAutoCorr(const MyBuffer& myBuffer, std::vector<float>& r)
+void VocoderProcess::lpc(const MyBuffer &myBuffer, const int order)
+{
+    biaisedAutoCorr(myBuffer, r, order);
+    levinsonDurbin(r, a, a_prev, order);
+}
+
+
+void VocoderProcess::biaisedAutoCorr(const MyBuffer& myBuffer, std::vector<float>& r, const int order)
 {
     for (int m = 0; m < order + 1; m++)
     {
         r[m] = 0;
 
-        for (int n = startSample; n < startSample + wlen - m; n++)
+        for (int n = 0; n <  wlen - m; n++)
         {
-            r[m] += myBuffer.getVoiceSample(0, n) * myBuffer.getVoiceSample(0, m + n);
+            r[m] += myBuffer.getVoiceSample(0, startSample + n) *
+                    myBuffer.getVoiceSample(0, startSample + m + n);
         }
-        r[m]/=wlen;
+        r[m]/=float(wlen);
     }
 }
 
 
-void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev)
+void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev,
+        const int order)
 {
     a[0] = 1.0;
     a[1] = r[1]/r[0];
 
-    double rho_a;
-    double r_a;
-    double k;
+    float rho_a;
+    float r_a;
+    float k;
 
     for (int p = 2;  p < order + 1; p++)
     {
@@ -151,7 +191,7 @@ void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<flo
 }
 
 
-void VocoderProcess::filter_FIR(MyBuffer& myBuffer, const std::vector<float>& a)
+void VocoderProcess::filter_FIR(MyBuffer& myBuffer, const std::vector<float>& a, const int order)
 {
     meanAbsE = 0.0;
     for (int i = 0; i < wlen; i++) {
@@ -159,7 +199,7 @@ void VocoderProcess::filter_FIR(MyBuffer& myBuffer, const std::vector<float>& a)
 
         for (int k = 1; k < order + 1; k++) {
             if (i - k >= 0)
-                e[i] += myBuffer.getSynthSample(0, startSample + i - k) * a[k];
+                e[i] += myBuffer.getVoiceSample(0, startSample + i - k) * a[k];
             else
                 break;
         }
@@ -170,14 +210,25 @@ void VocoderProcess::filter_FIR(MyBuffer& myBuffer, const std::vector<float>& a)
 }
 
 
-void VocoderProcess::filter_IIR(MyBuffer& myBuffer, const std::vector<float>& a) {
-    if (k_iter==0)
+void VocoderProcess::filter_IIR(MyBuffer& myBuffer, const std::vector<float>& a, const int order) {
+    int printIdx = 0;
+
+    for (int i = 0; i < wlen; i++)
     {
-        std::cout << "meanAbsE:  " << meanAbsE << std::endl;
-        std::cout << "a[0] :  " << a[0] << std::endl;
-    }
-    for (int i = 0; i < wlen; i++) {
         out[i] = myBuffer.getSynthSample(0, startSample + i);
+
+        out[i] = out[i]*meanAbsE;
+
+
+        /*
+        if (k_iter== 0)
+        {
+            std::cout<< out[i] << " ";
+            if (i==wlen-1)
+                std::cout << "\n \n";
+        }
+         */
+
         for (int k = 1; k < order + 1; k++) {
             if (i-k >= 0)
                 out[i] -= out[i-k] * a[k];
@@ -185,12 +236,37 @@ void VocoderProcess::filter_IIR(MyBuffer& myBuffer, const std::vector<float>& a)
                 break;
         }
 
-        out[i] = out[i]*meanAbsE/(0.2 * a[0]);
+        /*
+        if(abs(out[i]) > 1. && i > 0)
+        {
+            out[i] = 0;
+            std::cout<< i << "\n";
+        }
+        */
+        /*
+        if(abs(out[i])>10)
+        {
+            std::cout << "out[i]:  " << out[i] << "  meanAbsE:  " << meanAbsE << " \n";
+
+            if (printIdx==0) {
+                for (int j = 0; j < order + 1; j++)
+                    std::cout << a[j] << "  ";
+                std::cout << "\n\n";
+                std::cout << "i " << i << "\n";
+                std::cout << "x = [";
+                for (int j = 0; j < wlen; j++) {
+                    std::cout << myBuffer.getSynthSample(0, startSample + j) << ", ";
+                }
+                std::cout << "] \n";
+            }
+            printIdx +=1;
+        }
+        */
 
         // Todo: something with channels: this code is probably not efficient at all
         // Maybe create a vector out and e for each channel ?
         for (int channel = 0; channel < myBuffer.getNumChannels(); channel++)
-            myBuffer.addOutSample(channel, startSample + i, out[i] * window[i]);
+            myBuffer.addOutSample(channel, startSample + i,  audioProcPtr->gain * out[i] * window[i]);
     }
 }
 

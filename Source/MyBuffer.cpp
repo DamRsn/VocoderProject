@@ -14,12 +14,7 @@ MyBuffer::MyBuffer() {
 
 }
 
-MyBuffer::~MyBuffer()
-{
-    mOutput.~AudioBuffer();
-    mInputSynth.~AudioBuffer();
-    mInputVoice.~AudioBuffer();
-}
+MyBuffer::~MyBuffer(){}
 
 void MyBuffer::prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, double sampleRate_, int numChannels_)
 {
@@ -71,9 +66,10 @@ void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const Aud
             mInputVoice.copyFrom(channel, inCounter, voiceBuffer, channel, 0, inSize - inCounter);
             mInputSynth.copyFrom(channel, inCounter, synthBuffer, channel, 0, inSize - inCounter);
             
-            int n_to_add = samplesPerBlock + inCounter - inSize;
-            mInputVoice.copyFrom(channel, 0, voiceBuffer, channel, inSize - inCounter, n_to_add);
-            mInputSynth.copyFrom(channel, 0, synthBuffer, channel, inSize - inCounter, n_to_add);
+            mInputVoice.copyFrom(channel, 0, voiceBuffer, channel,
+                    inSize - inCounter, samplesPerBlock + inCounter - inSize);
+            mInputSynth.copyFrom(channel, 0, synthBuffer, channel,
+                    inSize - inCounter, samplesPerBlock + inCounter - inSize);
         }
     }
 }

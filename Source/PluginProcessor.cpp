@@ -24,6 +24,7 @@ VocoderAudioProcessor::VocoderAudioProcessor()
                        )
 #endif
 {
+    vocoderProcess.setAudioProcPtr(this);
     mySynth.clearVoices();
     for (int i = 0; i < 10; i++)
     {
@@ -112,8 +113,9 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    int wlen = 256;
-    int hop = 128;
+    gain = 1.0;
+    int wlen = 512;
+    int hop = 256;
     std::string window_str = "hann";
     int order = 15;
     int orderMax = 30;

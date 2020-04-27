@@ -10,10 +10,11 @@
 
 #pragma once
 
-#include <valarray>
+#include <vector>
 #include <iostream>
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "MyBuffer.h"
+#include <cmath>
+#include <string>
 
 
-void process(MyBuffer &myBuffer, float* window);

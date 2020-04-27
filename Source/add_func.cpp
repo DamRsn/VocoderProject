@@ -10,7 +10,3 @@
 
 #include "add_func.h"
 
-void process(MyBuffer &myBuffer, float* window)
-{
-    
-}
