@@ -34,6 +34,8 @@ private:
     VocoderAudioProcessor& processor;
 
     Slider gainSlider;
+    Slider velocitySlider;
+
 
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VocoderAudioProcessorEditor)

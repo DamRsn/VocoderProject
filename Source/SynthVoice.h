@@ -14,72 +14,33 @@
 #include "maximilian.h"
 #include <iostream>
 
+class VocoderAudioProcessor;
+
+
 class SynthVoice : public SynthesiserVoice
 {
 public:
-    bool canPlaySound (SynthesiserSound* sound) override
-    {
-        return dynamic_cast <SynthSound*>(sound) != nullptr;
-    }
-    
-    void startNote (int midiNoteNumber, float velocity, SynthesiserSound *sound, int currentPitchWheelPosition) override
-    {
-        env1.trigger = 1;
 
-        // Todo: deal with velocity in a better way
-        level = 0.2;
+    //SynthVoice(VocoderAudioProcessor* audioProcPtr);
+    bool canPlaySound (SynthesiserSound* sound) override;
 
-        frequency = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-    }
+    void startNote (int midiNoteNumber, float velocity, SynthesiserSound *sound, int currentPitchWheelPosition)
+    override;
     
-    void stopNote (float velocity, bool allowTailOff) override
-    {
-        env1.trigger = 0;
-        allowTailOff = true;
+    void stopNote (float velocity, bool allowTailOff) override;
+    
+    void pitchWheelMoved (int newPitchWheelValue) override;
+    
+    void controllerMoved (int controllerNumber, int newControllerValue) override;
+    
+    void renderNextBlock (AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override;
 
-        if (velocity == 0)
-            clearCurrentNote();
-    }
-    
-    void pitchWheelMoved (int newPitchWheelValue) override
-    {
-        
-    }
-    
-    void controllerMoved (int controllerNumber, int newControllerValue) override
-    {
-        
-    }
-    
-    void renderNextBlock (AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override
-    {
-        env1.setAttack(200);
-        env1.setDecay(1000);
-        env1.setSustain(0.9);
-        env1.setRelease(600);
-        
-        for (int sample = 0; sample < numSamples; sample++)
-        {
-            double theWave = osc1.saw(frequency);
-            double theSound = env1.adsr(theWave, env1.trigger) * level;
-
-            
-            for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
-            {
-                outputBuffer.addSample(channel, sample, theSound);
-            }
-            ++startSample;
-        }
-        
-        
-        
-    }
-    
 private:
     double level;
     double frequency;
     
     maxiOsc  osc1;
     maxiEnv env1;
+    //VocoderAudioProcessor* audioProcPtr;
 };
 

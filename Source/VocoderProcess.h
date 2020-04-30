@@ -29,7 +29,9 @@ public:
 
     void process(MyBuffer& myBuffer);
 
-    void setOrder(int newOrder);
+    void setOrderVoice(int newOrder);
+    void setOrderSynth(int newOrder);
+
 
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
 
@@ -39,28 +41,50 @@ private:
     int hop;
     int startSample;
 
-    int order;
-    int orderMax;
-    float meanAbsE;
+    int orderVoice;
+    int orderMaxVoice;
+    int orderSynth;
+    int orderMaxSynth;
+
+    double meanAbsE;
     int k_iter;
+
+    double g;
+    double EeVoice;
+    double EeSynth;
+    double lambda;
+
     std::vector<float> window;
 
-    std::vector<float> r;
-    std::vector<float> a;
-    std::vector<float> a_prev;
+    std::vector<float> rVoice;
+    std::vector<float> aVoice;
+    std::vector<float> aPrevVoice;
+    std::vector<float> eVoice;
 
-    std::vector<float> e;
+    std::vector<float> rSynth;
+    std::vector<float> aSynth;
+    std::vector<float> aPrevSynth;
+    std::vector<float> eSynth;
+
+
     std::vector<float> out;
 
     void processWindow(MyBuffer& myBuffer);
 
-    void biaisedAutoCorr(const MyBuffer& myBuffer, std::vector<float>& r, const int order);
-    void levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev,
-            const int order);
-    void lpc(const MyBuffer& myBuffer, const int order);
+    void lpc(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& r,
+            std::vector<float>& a, std::vector<float>& a_prev, const int& order);
 
-    void filter_FIR(MyBuffer& myBuffer, const std::vector<float>& a, const int order);
-    void filter_IIR(MyBuffer& myBuffer, const std::vector<float>& a, const int order);
+    void biaisedAutoCorr(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& r, const
+    int&
+    order);
+
+    void levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev,
+            const int& order);
+
+    void filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& e,
+            const std::vector<float>& a, const int order, double& E);
+
+    void filterIIR(MyBuffer& myBuffer, const std::vector<float>& e, const std::vector<float>& a, const int order);
 
     VocoderAudioProcessor* audioProcPtr;
 

@@ -65,6 +65,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     float gain;
+    float velocity;
 
 private:
     Synthesiser mySynth;
