@@ -35,6 +35,19 @@ private:
 
     Slider gainSlider;
     Slider velocitySlider;
+    Slider gainVoiceSlider;
+    Slider gainSynthSlider;
+    Slider gainVocoderSlider;
+    Slider LPCVoiceSlider;
+    Slider LPCSynthSlider;
+
+    Label gainLabel;
+    Label velocityLabel;
+    Label gainVoiceLabel;
+    Label gainSynthLabel;
+    Label gainVocoderLabel;
+    Label LPCVoiceLabel;
+    Label LPCSynthLabel;
 
 
 

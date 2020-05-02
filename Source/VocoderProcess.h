@@ -16,6 +16,8 @@
 #include <iostream>
 #include <assert.h>
 #include <cmath>
+#include <math.h>
+#include "add_func.h"
 
 class VocoderAudioProcessor;
 
@@ -29,12 +31,7 @@ public:
 
     void process(MyBuffer& myBuffer);
 
-    void setOrderVoice(int newOrder);
-    void setOrderSynth(int newOrder);
-
-
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
-
 
 private:
     int wlen;
@@ -54,7 +51,13 @@ private:
     double EeSynth;
     double lambda;
 
-    std::vector<float> window;
+    double gainBeforeIIR;
+    double gainVoice;
+    double gainVocoder;
+    double gainSynth;
+
+    std::vector<float> anWindow;
+    std::vector<float> stWindow;
 
     std::vector<float> rVoice;
     std::vector<float> aVoice;
@@ -66,8 +69,16 @@ private:
     std::vector<float> aPrevSynth;
     std::vector<float> eSynth;
 
-
     std::vector<float> out;
+
+    std::vector<float> EeVoiceArr;
+    std::vector<float> EeSynthArr;
+
+
+    void setWindows(std::string windowType);
+
+    void setOrderVoice();
+    void setOrderSynth();
 
     void processWindow(MyBuffer& myBuffer);
 
@@ -75,8 +86,7 @@ private:
             std::vector<float>& a, std::vector<float>& a_prev, const int& order);
 
     void biaisedAutoCorr(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& r, const
-    int&
-    order);
+    int& order);
 
     void levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev,
             const int& order);
@@ -84,7 +94,7 @@ private:
     void filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& e,
             const std::vector<float>& a, const int order, double& E);
 
-    void filterIIR(MyBuffer& myBuffer, const std::vector<float>& e, const std::vector<float>& a, const int order);
+    void filterIIR(MyBuffer& myBuffer, const std::vector<float>& a, const int order);
 
     VocoderAudioProcessor* audioProcPtr;
 

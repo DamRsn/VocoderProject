@@ -66,6 +66,13 @@ public:
 
     float gain;
     float velocity;
+    float gainSynth;
+    float gainVocoder;
+    float gainVoice;
+    int orderVoice;
+    int orderSynth;
+    int orderMaxVoice;
+    int orderMaxSynth;
 
 private:
     Synthesiser mySynth;

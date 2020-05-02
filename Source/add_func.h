@@ -12,8 +12,6 @@
 
 #include <vector>
 #include <iostream>
-#include "../JuceLibraryCode/JuceHeader.h"
-#include "MyBuffer.h"
 #include <cmath>
 #include <string>
 

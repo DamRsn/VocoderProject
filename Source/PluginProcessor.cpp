@@ -34,6 +34,8 @@ VocoderAudioProcessor::VocoderAudioProcessor()
     mySynth.clearSounds();
     
     mySynth.addSound(new SynthSound());
+    orderMaxVoice = 100;
+    orderMaxSynth = 30;
 
 }
 
@@ -115,13 +117,13 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    gain = 1.0;
     int wlen = 512;
     int hop = 128;
     std::string window_str = "hann";
-    int order = 15;
-    int orderMax = 30;
+    int orderMax = 100;
 
+    orderVoice = 15;
+    orderSynth = 4;
 
     int samplesToKeep = 0;
     int latency;
@@ -139,14 +141,15 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     std::cout << "latency:  " << latency << std::endl;
     std::cout << "wlen:  " << wlen << std::endl;
     std::cout << "hop:  " << hop << std::endl;
-    std::cout << "order:  " << order << std::endl;
+    std::cout << "orderVoice:  " << orderVoice << std::endl;
+    std::cout << "orderSynth:  " << orderSynth << std::endl;
 
-    vocoderProcess.prepare(wlen, hop, order, orderMax, window_str);
+
+    vocoderProcess.prepare(wlen, hop, orderVoice, orderMaxVoice, window_str);
 
     myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, getTotalNumInputChannels());
 
     setLatencySamples(latency);
-
 }
 
 void VocoderAudioProcessor::releaseResources()
