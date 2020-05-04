@@ -83,6 +83,8 @@ VocoderProcess::~VocoderProcess() {}
 
 void VocoderProcess::setWindows(std::string windowType)
 {
+    // Build window vector for analysis and synthesis
+
     anWindow.resize(wlen, 0.0);
     stWindow.resize(wlen, 0.0);
 
@@ -135,7 +137,6 @@ void VocoderProcess::setWindows(std::string windowType)
 
 void VocoderProcess::setOrderVoice()
 {
-
     if (audioProcPtr->orderVoice > orderMaxVoice)
     {
         std::cout << "New order for LPC Voice is larger than OrderMax" << std::endl;
@@ -172,7 +173,10 @@ void VocoderProcess::process(MyBuffer &myBuffer)
         startSample += hop;
     }
 
+    // Update startSample
     startSample -= myBuffer.getSamplesPerBlock();
+
+    // Variable used to print something every ... iterations
     k_iter+=1;
     k_iter%=300;
 }
@@ -290,14 +294,15 @@ void VocoderProcess::filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(
         }
     E += e[i]*e[i];
     }
-
-
 }
 
 
 void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<float>& a,
         const int order)
 {
+    // a is a vector of Voice LPC coefficients
+    // order is the order of LPC filter
+
     // Array of energy of previous windows, use mean to have smooth gain changes
     shift(EeVoiceArr);
     shift(EeSynthArr);
