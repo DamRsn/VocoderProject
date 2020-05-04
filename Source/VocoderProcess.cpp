@@ -56,6 +56,7 @@ void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, st
     EeSynth = 1.0;
     EeVoice = 0.0;
 
+
     EeVoiceArr.resize(10, 0.0);
     EeSynthArr.resize(10, 0.0);
 
@@ -164,6 +165,7 @@ void VocoderProcess::process(MyBuffer &myBuffer)
     gainSynth = Decibels::decibelsToGain(audioProcPtr-> gainSynth);
     gainVocoder = Decibels::decibelsToGain(audioProcPtr->gainVocoder);
 
+    // Call process window
     while (startSample < myBuffer.getSamplesPerBlock())
     {
         processWindow(myBuffer);
@@ -273,6 +275,7 @@ void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<flo
 void VocoderProcess::filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& e,
         const std::vector<float>& a, const int order, double& E)
 {
+    // Get excitation signal and its energy on current window
     E = 0.0;
     for (int i = 0; i < wlen; i++)
     {
@@ -295,28 +298,25 @@ void VocoderProcess::filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(
 void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<float>& a,
         const int order)
 {
-    // Todo : implement shift in place, we are allocating memory in the audio thread here
+    // Array of energy of previous windows, use mean to have smooth gain changes
     shift(EeVoiceArr);
     shift(EeSynthArr);
     EeVoiceArr[0] = EeVoice;
     EeSynthArr[0] = EeSynth;
 
+
     if (EeSynth > pow(10, -2))
+        // For now lambda is 0
         g = lambda * g + (1-lambda) * sqrt(sum(EeVoiceArr)/sum(EeSynthArr));
 
     else
         g = 0.0;
 
-    if (maxAbs(a)>10)
-    {
-        for (int k = 1; k < order + 1; k++) {
-            std::cout << a[k] << " ";
-        }
-        std::cout <<"\n";
-    }
 
     for (int i = 0; i < wlen; i++)
     {
+        // get first sample and apply gain computed with energy of voice and synth (g)
+        // and gain from a slider command (gainBeforeIIR)
         out[i] =  gainBeforeIIR * g * eSynth[i];
 
         // Todo: THIS IS WHERE EXPLOSIONS OFTEN OCCUR: IIR FILTER
@@ -326,12 +326,9 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<float>& a,
             else
                 break;
         }
-
-
-        // Todo: something with channels: this code is probably not efficient at all
-        // Maybe create a vector out and e for each channel ?
     }
 
+    // Add samples to output buffer
     for (int channel = 0; channel < myBuffer.getNumChannels(); channel++)
     {
         for (int i = 0; i < wlen; i++) {
@@ -345,6 +342,7 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<float>& a,
 }
 
 
+// Some methods on vector
 float sum(const std::vector<float>& v)
 {
     float s = 0;

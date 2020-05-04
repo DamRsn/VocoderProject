@@ -24,13 +24,7 @@ void MyBuffer::prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, d
     latency = latency_;
     numChannels = numChannels_;
 
-    if (samplesToKeep != 0)
-    {
-        std::cerr<< "ERROR: sampleToKeep is not zero, assert call" << std::endl;
-        assert(false);
-    }
-    
-    
+
     inSize = samplesToKeep + samplesPerBlock + latency;
     outSize = samplesPerBlock + latency;
 
@@ -125,6 +119,7 @@ float MyBuffer::getSynthSample(int channel, int idx) const
 
 void MyBuffer::addOutSample(int channel, int idx, float value)
 {
+
     if (idx < 0 || idx >= (outSize))
     {
         std::cerr << "idx out of range in addOutSample()." << std::endl;
