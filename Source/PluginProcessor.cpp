@@ -119,7 +119,7 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
 
     int wlen = 512;
     int hop = 128;
-    std::string window_str = "hann";
+    std::string window_str = "sine";
     int orderMax = 100;
 
     orderVoice = 15;

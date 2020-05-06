@@ -15,10 +15,10 @@
 
 VocoderProcess::VocoderProcess(){}
 
-float sum(const std::vector<float>& v);
-float maxAbs(const std::vector<float>& v);
+double sum(const std::vector<double>& v);
+double maxAbs(const std::vector<double>& v);
 
-void shift(std::vector<float>& v);
+void shift(std::vector<double>& v);
 
 void VocoderProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
 {
@@ -61,22 +61,6 @@ void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, st
     EeSynthArr.resize(10, 0.0);
 
     setWindows(windowType);
-
-    std::cout<< "\nanWindow = [";
-    for (int i = 0; i < wlen; i++)
-    {
-        std::cout<< anWindow[i] << ",";
-    }
-    std::cout << "]\nstWindow = [";
-
-    for (int i = 0; i < wlen; i++)
-    {
-        std::cout<< stWindow[i] << ",";
-    }
-
-    std::cout << "]\n";
-
-
 }
 
 VocoderProcess::~VocoderProcess() {}
@@ -88,9 +72,9 @@ void VocoderProcess::setWindows(std::string windowType)
     anWindow.resize(wlen, 0.0);
     stWindow.resize(wlen, 0.0);
 
-    float overlap = float((wlen-hop))/float(wlen);
+    double overlap = double((wlen-hop))/double(wlen);
 
-    float overlapFactor = 1.0;
+    double overlapFactor = 1.0;
 
     if (abs(overlap - 0.75) < pow(10, -10))
     {
@@ -107,8 +91,8 @@ void VocoderProcess::setWindows(std::string windowType)
     if (windowType=="hann")
     {
         std::cout << "Window type is hann" << std::endl;
-        dsp::WindowingFunction<float>::fillWindowingTables(&stWindow[0], wlen,
-                                                           dsp::WindowingFunction<float>::hann,false);
+        dsp::WindowingFunction<double>::fillWindowingTables(&stWindow[0], wlen,
+                                                           dsp::WindowingFunction<double>::hann,false);
         for (int i = 0; i < wlen; i++)
         {
             stWindow[i] *= overlapFactor;
@@ -122,8 +106,8 @@ void VocoderProcess::setWindows(std::string windowType)
         std::cout << "Window type is sine" << std::endl;
         for (int i = 0; i < wlen; i++)
         {
-            anWindow[i] = overlapFactor * sin((i+0.5)*PI/float(wlen));
-            stWindow[i] = overlapFactor * sin((i+0.5)*PI/float(wlen));
+            anWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
+            stWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
         }
     }
 
@@ -206,16 +190,16 @@ void VocoderProcess::processWindow(MyBuffer &myBuffer)
 }
 
 
-void VocoderProcess::lpc(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& r,
-        std::vector<float>& a, std::vector<float>& a_prev, const int& order)
+void VocoderProcess::lpc(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& r,
+        std::vector<double>& a, std::vector<double>& a_prev, const int& order)
 {
     biaisedAutoCorr(myBuffer, getSample, r, order);
     levinsonDurbin(r, a, a_prev, order);
 }
 
 
-void VocoderProcess::biaisedAutoCorr(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const,
-        std::vector<float> &r, const int& order)
+void VocoderProcess::biaisedAutoCorr(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const,
+        std::vector<double> &r, const int& order)
 {
     for (int m = 0; m < order + 1; m++)
     {
@@ -226,12 +210,12 @@ void VocoderProcess::biaisedAutoCorr(MyBuffer& myBuffer, float (MyBuffer::*getSa
             r[m] += (myBuffer.*getSample)(0, startSample + n) * anWindow[n] *
                     (myBuffer.*getSample)(0, startSample + m + n) * anWindow[m + n];
         }
-        r[m]/=float(wlen);
+        r[m]/=double(wlen);
     }
 }
 
 
-void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev,
+void VocoderProcess::levinsonDurbin(const std::vector<double>& r, std::vector<double>& a, std::vector<double>& a_prev,
         const int& order)
 {
     // If first entry of autocorr is 0, then input is full of 0, put a[i] = 0 for all i but 0
@@ -245,9 +229,9 @@ void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<flo
         a[0] = 1.0;
         a[1] = r[1] / r[0];
 
-        float rho_a;
-        float r_a;
-        float k;
+        double rho_a;
+        double r_a;
+        double k;
 
         for (int p = 2; p < order + 1; p++) {
             for (int j = 1; j < p; j++) {
@@ -276,8 +260,8 @@ void VocoderProcess::levinsonDurbin(const std::vector<float>& r, std::vector<flo
 }
 
 
-void VocoderProcess::filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& e,
-        const std::vector<float>& a, const int order, double& E)
+void VocoderProcess::filterFIR(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const,
+        std::vector<double>& e, const std::vector<double>& a, const int order, double& E)
 {
     // Get excitation signal and its energy on current window
     E = 0.0;
@@ -297,7 +281,7 @@ void VocoderProcess::filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(
 }
 
 
-void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<float>& a,
+void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
         const int order)
 {
     // a is a vector of Voice LPC coefficients
@@ -348,18 +332,18 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<float>& a,
 
 
 // Some methods on vector
-float sum(const std::vector<float>& v)
+double sum(const std::vector<double>& v)
 {
-    float s = 0;
+    double s = 0;
     for (auto& n : v)
         s += n;
     return s;
 }
 
 
-float maxAbs(const std::vector<float>& v)
+double maxAbs(const std::vector<double>& v)
 {
-    float max = 0.0;
+    double max = 0.0;
     for (auto& n : v)
     {
         if (abs(n) > max)
@@ -369,8 +353,7 @@ float maxAbs(const std::vector<float>& v)
 }
 
 
-
-void shift(std::vector<float>& v)
+void shift(std::vector<double>& v)
 {
     for (int i = v.size()-1; i>0; i--)
     {

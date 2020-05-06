@@ -14,9 +14,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include <cmath>
-#include <math.h>
 #include "add_func.h"
 
 class VocoderAudioProcessor;
@@ -67,27 +66,27 @@ private:
     double gainSynth;
 
     // Analysis and synthesis windows
-    std::vector<float> anWindow;
-    std::vector<float> stWindow;
+    std::vector<double> anWindow;
+    std::vector<double> stWindow;
 
     // Autocorr, LPC coeff, Previous LPC coeff (for levinson-durbin), and excitation for voice signal
-    std::vector<float> rVoice;
-    std::vector<float> aVoice;
-    std::vector<float> aPrevVoice;
-    std::vector<float> eVoice;
+    std::vector<double> rVoice;
+    std::vector<double> aVoice;
+    std::vector<double> aPrevVoice;
+    std::vector<double> eVoice;
 
     // Autocorr, LPC coeff, Previous LPC coeff (for levinson-durbin), and excitation for synth signal
-    std::vector<float> rSynth;
-    std::vector<float> aSynth;
-    std::vector<float> aPrevSynth;
-    std::vector<float> eSynth;
+    std::vector<double> rSynth;
+    std::vector<double> aSynth;
+    std::vector<double> aPrevSynth;
+    std::vector<double> eSynth;
 
     // Vocoder output
-    std::vector<float> out;
+    std::vector<double> out;
 
     // Energy of previous and current windows for excitation signal for voice and synth
-    std::vector<float> EeVoiceArr;
-    std::vector<float> EeSynthArr;
+    std::vector<double> EeVoiceArr;
+    std::vector<double> EeSynthArr;
 
 
     void setWindows(std::string windowType);
@@ -97,19 +96,19 @@ private:
 
     void processWindow(MyBuffer& myBuffer);
 
-    void lpc(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& r,
-            std::vector<float>& a, std::vector<float>& a_prev, const int& order);
+    void lpc(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& r,
+            std::vector<double>& a, std::vector<double>& a_prev, const int& order);
 
-    void biaisedAutoCorr(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& r, const
+    void biaisedAutoCorr(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& r, const
     int& order);
 
-    void levinsonDurbin(const std::vector<float>& r, std::vector<float>& a, std::vector<float>& a_prev,
+    void levinsonDurbin(const std::vector<double>& r, std::vector<double>& a, std::vector<double>& a_prev,
             const int& order);
 
-    void filterFIR(MyBuffer& myBuffer, float (MyBuffer::*getSample)(int, int) const, std::vector<float>& e,
-            const std::vector<float>& a, const int order, double& E);
+    void filterFIR(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& e,
+            const std::vector<double>& a, const int order, double& E);
 
-    void filterIIR(MyBuffer& myBuffer, const std::vector<float>& a, const int order);
+    void filterIIR(MyBuffer& myBuffer, const std::vector<double>& a, const int order);
 
     // Pointer to pluginProcessor to get the value of the different sliders
     VocoderAudioProcessor* audioProcPtr;

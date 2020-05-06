@@ -47,9 +47,27 @@ void MyBuffer::prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, d
 
 void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const AudioBuffer<float> &synthBuffer)
 {
+    int numSamples = voiceBuffer.getNumSamples();
     for(int channel = 0; channel < numChannels; channel++)
     {
-        if (inCounter + samplesPerBlock <= inSize)
+        auto* voiceReadPtr = voiceBuffer.getReadPointer(channel);
+        auto* inVoiceWrtPtr = mInputVoice.getWritePointer(channel, 0);
+
+        for (int i=0; i < numSamples; i++)
+        {
+            inVoiceWrtPtr[(inCounter + i)%inSize] = voiceReadPtr[i];
+        }
+
+        auto* synthReadPtr = synthBuffer.getReadPointer(channel);
+        auto* inSynthWrtPtr = mInputSynth.getWritePointer(channel, 0);
+
+        for (int i=0; i < numSamples; i++)
+        {
+            inSynthWrtPtr[(inCounter + i)%inSize] = synthReadPtr[i];
+        }
+
+
+        /*if (inCounter + samplesPerBlock <= inSize)
         {
             mInputVoice.copyFrom(channel, inCounter, voiceBuffer, channel, 0, samplesPerBlock);
             mInputSynth.copyFrom(channel, inCounter, synthBuffer, channel, 0, samplesPerBlock);
@@ -65,6 +83,7 @@ void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const Aud
             mInputSynth.copyFrom(channel, 0, synthBuffer, channel,
                     inSize - inCounter, samplesPerBlock + inCounter - inSize);
         }
+         */
     }
 }
 
@@ -92,7 +111,7 @@ void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer)
 }
 
 
-float MyBuffer::getVoiceSample(int channel, int idx) const
+double MyBuffer::getVoiceSample(int channel, int idx) const
 {
     if (idx < -samplesToKeep || idx >= (samplesPerBlock + latency))
     {
@@ -105,7 +124,7 @@ float MyBuffer::getVoiceSample(int channel, int idx) const
 }
 
 
-float MyBuffer::getSynthSample(int channel, int idx) const
+double MyBuffer::getSynthSample(int channel, int idx) const
 {
     if (idx < -samplesToKeep || idx >= (samplesPerBlock + latency))
     {
@@ -130,7 +149,7 @@ void MyBuffer::addOutSample(int channel, int idx, float value)
 }
 
 
-float MyBuffer::getOutSample(int channel, int idx) const
+double MyBuffer::getOutSample(int channel, int idx) const
 {
     if (idx < 0 || idx >= (outSize))
     {
