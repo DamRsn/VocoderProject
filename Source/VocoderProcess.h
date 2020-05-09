@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cmath>
 #include "add_func.h"
+#include "LPC.h"
 
 class VocoderAudioProcessor;
 
@@ -95,15 +96,6 @@ private:
     void setOrderSynth();
 
     void processWindow(MyBuffer& myBuffer);
-
-    void lpc(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& r,
-            std::vector<double>& a, std::vector<double>& a_prev, const int& order);
-
-    void biaisedAutoCorr(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& r, const
-    int& order);
-
-    void levinsonDurbin(const std::vector<double>& r, std::vector<double>& a, std::vector<double>& a_prev,
-            const int& order);
 
     void filterFIR(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double>& e,
             const std::vector<double>& a, const int order, double& E);
