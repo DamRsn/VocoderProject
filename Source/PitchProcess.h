@@ -13,6 +13,7 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "MyBuffer.h"
 #include "LPC.h"
+#include "Notes.h"
 #include <vector>
 #include <iostream>
 #include <string>
@@ -20,7 +21,8 @@
 #include <cassert>
 
 
-int argExt(MyBuffer& myBuffer, int idxStart, int idxEnd, bool min=true);
+bool equal(double a, double b);
+
 class VocoderAudioProcessor;
 
 class PitchProcess
@@ -31,7 +33,7 @@ public:
 
     void prepare(double fS, double fMin, double fMax, int wlen, int hop, int order, int orderMax, double speed);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
-    int setLatency();
+    int getLatency();
 
     void process();
 
@@ -39,11 +41,18 @@ private:
 
     int yin(MyBuffer& myBuffer);
     void pitchMarks(MyBuffer& myBuffer);
-    void getStMarks();
+    void placeStMarks();
     void psola();
+
+    void fillPsolaWindow(std::vector<double>& psolaWindow, const int& T);
+    int argExt(const MyBuffer& myBuffer, int idxStart, int idxEnd, bool min=true);
 
     int wlen;
     int hop;
+    bool valley;
+
+    Notes notes;
+    Notes::key key;
 
     double fMin;
     double fMax;
@@ -54,12 +63,19 @@ private:
     double yinTol;
 
     int period;
+    int prevPeriod;
+    int prevVoicedPeriod;
+    int periodNew;
     double pitch;
     double prevPitch;
+    double closestFreq;
+    double prevClosestFreq;
+
     double beta;
 
     // Correction speed in ms
     double speed;
+    double counter;
 
     // Vectors
     // For pitch calculation
@@ -68,8 +84,8 @@ private:
     // For pitch marks
     std::vector<int> anMarks;
     std::vector<int> stMarks;
-    std::vector<int> anMarksPrev;
-    std::vector<int> stMarksPrev;
+    std::vector<int> prevAnMarks;
+    std::vector<int> prevStMarks;
 
     // Vectors for LPC
     std::vector<double> a;
@@ -81,6 +97,9 @@ private:
     // Windows
     std::vector<double> anWindow;
     std::vector<double> stWindow;
+
+    std::vector<double> psolaWindow;
+
 
     // Pointer to pluginProcessor
     VocoderAudioProcessor* audioProcPtr;
