@@ -61,6 +61,7 @@ void Notes::buildFreqVect()
     freq.pop_back();
 }
 
+
 double Notes::getClosestFreq(const double &pitch, Notes::key key) {
     double closestFreq;
 

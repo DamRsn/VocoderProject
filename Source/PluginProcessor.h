@@ -17,6 +17,7 @@
 #include "add_func.h"
 #include "MyBuffer.h"
 #include "VocoderProcess.h"
+#include "PitchProcess.h"
 #include <string>
 #include <math.h>
 
@@ -86,6 +87,7 @@ private:
 
     // Class with process function
     VocoderProcess vocoderProcess;
+    PitchProcess pitchProcess;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VocoderAudioProcessor)

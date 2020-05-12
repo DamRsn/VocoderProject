@@ -34,6 +34,7 @@ public:
 
     int getSamplesPerBlock() const{return samplesPerBlock;}
     int getLatency() const{return latency;}
+    int getIdxMax() const {return latency + samplesPerBlock;}
     int getNumChannels() const{return numChannels;}
 
     void clearOutput(int channel, int numSamples);

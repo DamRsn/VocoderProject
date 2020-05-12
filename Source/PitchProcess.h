@@ -22,6 +22,9 @@
 
 
 bool equal(double a, double b);
+void operator-=(std::vector<int>& v1, const int& a);
+void operator+=(std::vector<int>& v1, const int& a);
+
 
 class VocoderAudioProcessor;
 
@@ -31,29 +34,53 @@ public:
     PitchProcess();
     ~PitchProcess();
 
-    void prepare(double fS, double fMin, double fMax, int wlen, int hop, int order, int orderMax, double speed);
+    void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int order, int orderMax, double speed, int
+    samplesPerBlock, Notes::key key);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
     int getLatency();
 
-    void process();
+    void process(MyBuffer& myBuffer);
 
 private:
 
-    int yin(MyBuffer& myBuffer);
+    void yin(MyBuffer& myBuffer);
     void pitchMarks(MyBuffer& myBuffer);
     void placeStMarks();
-    void psola();
+    void psola(MyBuffer& myBuffer);
 
+    void processStartFrame(MyBuffer& myBuffer);
+    void processContFrame(MyBuffer& myBuffer);
+
+    void fillOutputBuffer(MyBuffer& myBuffer);
+
+
+
+
+    // Utility functions
     void fillPsolaWindow(std::vector<double>& psolaWindow, const int& T);
     int argExt(const MyBuffer& myBuffer, int idxStart, int idxEnd, bool min=true);
+    int getClosestAnMarkIdx(const std::vector<int>& anMarks, const std::vector<int>& prevAnMarks, const int& stMark);
+    void buildWindows(std::vector<double>& anWindow, std::vector<double>& stWindow);
 
-    int wlen;
+    // Interpolate
+    void interp(std::vector<double>& x, const std::vector<double>& y, std::vector<double>& outWindow,
+            const std::vector<double>& psolaWindow, const int& startIdx, const int& stopIdx);
+
+    int frameLen;
     int hop;
-    bool valley;
+    double overlap;
+    int startSample;
+    int bufferIdxMax;
+
+    int bufferInFrameIdx;
+    int nBufferInFrame;
+    int samplesPerBlock;
+
 
     Notes notes;
     Notes::key key;
 
+    bool valley;
     double fMin;
     double fMax;
     double fS;
@@ -68,9 +95,13 @@ private:
     int periodNew;
     double pitch;
     double prevPitch;
+    double prevVoicedPitch;
     double closestFreq;
     double prevClosestFreq;
 
+    int stMarkIdx;
+    int nAnMarksOv;
+    int nStMarksOv;
     double beta;
 
     // Correction speed in ms
@@ -91,6 +122,7 @@ private:
     std::vector<double> a;
     std::vector<double> aPrev;
     std::vector<double> r;
+    std::vector<double> e;
     int order;
     int orderMax;
 
@@ -98,7 +130,17 @@ private:
     std::vector<double> anWindow;
     std::vector<double> stWindow;
 
+    // vector with hann window for psola
     std::vector<double> psolaWindow;
+
+    // to store 2*period + 1 samples centered on a pitch mark
+    std::vector<double> periodSamples;
+
+    std::vector<double> xInterp;
+
+    std::vector<double> outFrame;
+
+
 
 
     // Pointer to pluginProcessor

@@ -120,7 +120,7 @@ double MyBuffer::getVoiceSample(int channel, int idx) const
         assert(false);
     }
 
-    return mInputVoice.getSample(channel, (currCounter + idx)%inSize);
+    return mInputVoice.getSample(channel, (currCounter + idx + inSize)%inSize);
 }
 
 
@@ -132,7 +132,7 @@ double MyBuffer::getSynthSample(int channel, int idx) const
         assert(false);
     }
 
-    return mInputSynth.getSample(channel, (currCounter + idx)%inSize);
+    return mInputSynth.getSample(channel, (currCounter + idx + inSize)%inSize);
 }
 
 
