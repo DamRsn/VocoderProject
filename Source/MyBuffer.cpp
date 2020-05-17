@@ -65,25 +65,6 @@ void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const Aud
         {
             inSynthWrtPtr[(inCounter + i)%inSize] = synthReadPtr[i];
         }
-
-
-        /*if (inCounter + samplesPerBlock <= inSize)
-        {
-            mInputVoice.copyFrom(channel, inCounter, voiceBuffer, channel, 0, samplesPerBlock);
-            mInputSynth.copyFrom(channel, inCounter, synthBuffer, channel, 0, samplesPerBlock);
-        }
-        
-        else
-        {
-            mInputVoice.copyFrom(channel, inCounter, voiceBuffer, channel, 0, inSize - inCounter);
-            mInputSynth.copyFrom(channel, inCounter, synthBuffer, channel, 0, inSize - inCounter);
-            
-            mInputVoice.copyFrom(channel, 0, voiceBuffer, channel,
-                    inSize - inCounter, samplesPerBlock + inCounter - inSize);
-            mInputSynth.copyFrom(channel, 0, synthBuffer, channel,
-                    inSize - inCounter, samplesPerBlock + inCounter - inSize);
-        }
-         */
     }
 }
 
@@ -136,7 +117,7 @@ double MyBuffer::getSynthSample(int channel, int idx) const
 }
 
 
-void MyBuffer::addOutSample(int channel, int idx, float value)
+void MyBuffer::addOutSample(int channel, int idx, double value)
 {
 
     if (idx < 0 || idx >= (outSize))

@@ -128,35 +128,38 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     orderSynth = 4;
 
     int samplesToKeep = 1024;
-    int latency=1024;
+    int latency;
 
-    /*
-    if(samplesPerBlock<= hop)
-        latency = wlen - samplesPerBlock;
-    else
-        latency = wlen;
-    */
+
     
     // latency = int(ceil(128.0/double(samplesPerBlock))) * samplesPerBlock;
 
 
+
+    //std::cout << "wlen:  " << wlenVoc << std::endl;
+    //std::cout << "hop:  " << hopVoc << std::endl;
+    //std::cout << "orderVoice:  " << orderVoice << std::endl;
+    //std::cout << "orderSynth:  " << orderSynth << std::endl;
+
+
+
+    pitchProcess.prepare(sampleRate, 100, 800, 1024, 512+256, 10, 15,
+            0, samplesPerBlock, Notes::Chrom);
+    vocoderProcess.prepare(wlenVoc, hopVoc, orderVoice, orderMaxVoice, window_str);
+
+    latency = std::max(pitchProcess.getLatency(samplesPerBlock), vocoderProcess.getLatency(samplesPerBlock));
+
+    myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, getTotalNumInputChannels());
+
+
+    setLatencySamples(latency);
+
+    /*
     std::cout << "\nbuffersize:  " << samplesPerBlock << std::endl;
     std::cout << "inSize:  " << samplesPerBlock + samplesToKeep + latency << std::endl;
     std::cout << "samplesToKeep:  " << samplesToKeep << std::endl;
     std::cout << "latency:  " << latency << std::endl;
-    std::cout << "wlen:  " << wlenVoc << std::endl;
-    std::cout << "hop:  " << hopVoc << std::endl;
-    std::cout << "orderVoice:  " << orderVoice << std::endl;
-    std::cout << "orderSynth:  " << orderSynth << std::endl;
-
-
-
-    pitchProcess.prepare(sampleRate, 100, 800, 1024, 512+256, 10, 15, 0, samplesPerBlock, Notes::Chrom);
-    vocoderProcess.prepare(wlenVoc, hopVoc, orderVoice, orderMaxVoice, window_str);
-
-    myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, getTotalNumInputChannels());
-
-    setLatencySamples(latency);
+     */
 }
 
 void VocoderAudioProcessor::releaseResources()
@@ -203,8 +206,8 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 
     myBuffer.fillInputBuffers(buffer, synthBuffer);
 
-    vocoderProcess.process(myBuffer);
-    pitchProcess.process(myBuffer);
+    //vocoderProcess.process(myBuffer);
+    pitchProcess.process2(myBuffer);
 
     myBuffer.fillOutputBuffer(buffer);
     

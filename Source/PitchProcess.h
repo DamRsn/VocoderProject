@@ -20,10 +20,13 @@
 #include <cmath>
 #include <cassert>
 
-
 bool equal(double a, double b);
-void operator-=(std::vector<int>& v1, const int& a);
-void operator+=(std::vector<int>& v1, const int& a);
+template <typename T>
+void operator-=(std::vector<T>& v1, const T& a);
+template <typename T>
+void operator+=(std::vector<T>& v1, const T& a);
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& v);
 
 
 class VocoderAudioProcessor;
@@ -37,9 +40,10 @@ public:
     void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int order, int orderMax, double speed, int
     samplesPerBlock, Notes::key key);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
-    int getLatency();
+    int getLatency(int samplesPerBlock);
 
-    void process(MyBuffer& myBuffer);
+    //void process(MyBuffer& myBuffer);
+    void process2(MyBuffer& myBuffer);
 
 private:
 
@@ -48,18 +52,21 @@ private:
     void placeStMarks();
     void psola(MyBuffer& myBuffer);
 
+    /*
     void processStartFrame(MyBuffer& myBuffer);
     void processContFrame(MyBuffer& myBuffer);
-
+    */
     void fillOutputBuffer(MyBuffer& myBuffer);
 
-
+    void processChunkCont(MyBuffer& myBuffer);
+    void processChunkStart(MyBuffer& myBuffer);
 
 
     // Utility functions
     void fillPsolaWindow(std::vector<double>& psolaWindow, const int& T);
     int argExt(const MyBuffer& myBuffer, int idxStart, int idxEnd, bool min=true);
-    int getClosestAnMarkIdx(const std::vector<int>& anMarks, const std::vector<int>& prevAnMarks, const int& stMark);
+    int getClosestAnMarkIdx(const std::vector<int>& anMarks, const std::vector<int>& prevAnMarks, const int& stMark,
+            int periodPsola);
     void buildWindows(std::vector<double>& anWindow, std::vector<double>& stWindow);
 
     // Interpolate
@@ -72,9 +79,11 @@ private:
     int startSample;
     int bufferIdxMax;
 
-    int bufferInFrameIdx;
-    int nBufferInFrame;
     int samplesPerBlock;
+
+    int nChunk;
+    int chunkSize;
+    int chunksPerFrame;
 
 
     Notes notes;

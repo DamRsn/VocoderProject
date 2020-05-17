@@ -28,6 +28,7 @@ public:
     ~VocoderProcess();
 
     void prepare(int wlen, int hop, int order, int orderMax, std::string windowType);
+    int getLatency(int samplesPerBlock);
 
     void process(MyBuffer& myBuffer);
 

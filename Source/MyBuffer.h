@@ -29,7 +29,7 @@ public:
     double getVoiceSample(int channel, int idx) const;
     double getSynthSample(int channel, int idx) const;
 
-    void addOutSample(int channel, int idx, float value);
+    void addOutSample(int channel, int idx, double value);
     double getOutSample(int channel, int idx) const;
 
     int getSamplesPerBlock() const{return samplesPerBlock;}

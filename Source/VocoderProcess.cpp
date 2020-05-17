@@ -26,7 +26,7 @@ void VocoderProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
 }
 
 void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, std::string windowType) {
-    std::cout.precision(3);
+    //std::cout.precision(3);
     this->wlen = wlen;
     this->hop = hop;
     startSample = 0;
@@ -65,6 +65,19 @@ void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, st
 
 VocoderProcess::~VocoderProcess() {}
 
+
+int VocoderProcess::getLatency(int samplesPerBlock)
+{
+
+    int latency;
+    if(samplesPerBlock <= hop)
+        latency = wlen - samplesPerBlock;
+    else
+        latency = wlen;
+
+    return latency;
+}
+
 void VocoderProcess::setWindows(std::string windowType)
 {
     // Build window vector for analysis and synthesis
@@ -90,7 +103,7 @@ void VocoderProcess::setWindows(std::string windowType)
 
     if (windowType=="hann")
     {
-        std::cout << "Window type is hann" << std::endl;
+        //std::cout << "Window type is hann" << std::endl;
         dsp::WindowingFunction<double>::fillWindowingTables(&stWindow[0], wlen,
                                                            dsp::WindowingFunction<double>::hann,false);
         for (int i = 0; i < wlen; i++)
@@ -103,7 +116,7 @@ void VocoderProcess::setWindows(std::string windowType)
 
     else if (windowType=="sine")
     {
-        std::cout << "Window type is sine" << std::endl;
+        //std::cout << "Window type is sine" << std::endl;
         for (int i = 0; i < wlen; i++)
         {
             anWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
@@ -228,11 +241,10 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
 
     if (EeSynth > pow(10, -2))
         // For now lambda is 0
-        g = lambda * g + (1-lambda) * sqrt(sum(EeVoiceArr)/sum(EeSynthArr));
+        g = sqrt(sum(EeVoiceArr)/sum(EeSynthArr));
 
     else
         g = 0.0;
-
 
     for (int i = 0; i < wlen; i++)
     {
