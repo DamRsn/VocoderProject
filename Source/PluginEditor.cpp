@@ -18,30 +18,19 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
-    gainSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
-    gainSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainSlider.setRange(-60.0f, 60.0f, 0.1f);
-    gainSlider.setValue(0);
-    gainSlider.addListener(this);
-    addAndMakeVisible(gainSlider);
-    gainLabel.setText("G bIIR", dontSendNotification);
-    gainLabel.attachToComponent(&gainSlider, true);
-    addAndMakeVisible(gainLabel);
+    gainPitchSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
+    gainPitchSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
+    gainPitchSlider.setRange(-60.0f, 6.0f, 0.1f);
+    gainPitchSlider.setValue(0);
+    gainPitchSlider.addListener(this);
+    addAndMakeVisible(gainPitchSlider);
+    gainPitchLabel.setText("G Pitch", dontSendNotification);
+    gainPitchLabel.attachToComponent(&gainPitchSlider, true);
+    addAndMakeVisible(gainPitchLabel);
 
-    /*
-    velocitySlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
-    velocitySlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    velocitySlider.setRange(0.0f, 1.0f, 0.01f);
-    velocitySlider.setValue(0.0);
-    velocitySlider.addListener(this);
-    addAndMakeVisible(velocitySlider);
-    velocityLabel.setText("Vel NW", dontSendNotification);
-    velocityLabel.attachToComponent(&velocitySlider, true);
-    addAndMakeVisible(velocityLabel);
-    */
     gainVoiceSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainVoiceSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainVoiceSlider.setRange(-60.0f, 60.0f, 0.1f);
+    gainVoiceSlider.setRange(-60.0f, 6.0f, 0.1f);
     gainVoiceSlider.setValue(-60);
     gainVoiceSlider.addListener(this);
     addAndMakeVisible(gainVoiceSlider);
@@ -51,7 +40,7 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     
     gainSynthSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainSynthSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainSynthSlider.setRange(-60.0f, 60.0f, 0.1f);
+    gainSynthSlider.setRange(-60.0f, 6.0f, 0.1f);
     gainSynthSlider.setValue(-60);
     gainSynthSlider.addListener(this);
     addAndMakeVisible(gainSynthSlider);
@@ -61,7 +50,7 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     
     gainVocoderSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainVocoderSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainVocoderSlider.setRange(-60.0f, 60.0f, 0.1f);
+    gainVocoderSlider.setRange(-60.0f, 6.0f, 0.1f);
     gainVocoderSlider.setValue(0.0);
     gainVocoderSlider.addListener(this);
     addAndMakeVisible(gainVocoderSlider);
@@ -91,9 +80,7 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     addAndMakeVisible(LPCSynthLabel);
     
     
-    
-
-    setSize (1000, 300);
+    setSize (900, 300);
 
 }
 
@@ -116,7 +103,7 @@ void VocoderAudioProcessorEditor::paint (Graphics& g)
 
 void VocoderAudioProcessorEditor::resized()
 {
-    gainSlider.setBoundsRelative(0.1f, 0.0f, 0.1f, 0.8f);
+    gainPitchSlider.setBoundsRelative(0.1f, 0.0f, 0.1f, 0.8f);
     //velocitySlider.setBoundsRelative(0.23f, 0.0f,0.1f, 0.8f);
     gainVoiceSlider.setBoundsRelative(0.26f, 0.0f, 0.1f, 0.8f);
     gainSynthSlider.setBoundsRelative(0.42f, 0.0f, 0.1f, 0.8f);
@@ -129,11 +116,8 @@ void VocoderAudioProcessorEditor::resized()
 
 void VocoderAudioProcessorEditor::sliderValueChanged(Slider *slider)
 {
-    if (slider == &gainSlider)
-        processor.gain = gainSlider.getValue();
-
-    //if (slider == &velocitySlider)
-    //    processor.velocity = velocitySlider.getValue();
+    if (slider == &gainPitchSlider)
+        processor.gainPitch = gainPitchSlider.getValue();
 
     if (slider == &gainSynthSlider)
         processor.gainSynth = gainSynthSlider.getValue();

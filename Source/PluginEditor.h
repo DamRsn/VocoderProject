@@ -33,7 +33,7 @@ private:
     // access the processor object that created it.
     VocoderAudioProcessor& processor;
 
-    Slider gainSlider;
+    Slider gainPitchSlider;
     Slider velocitySlider;
     Slider gainVoiceSlider;
     Slider gainSynthSlider;
@@ -41,7 +41,7 @@ private:
     Slider LPCVoiceSlider;
     Slider LPCSynthSlider;
 
-    Label gainLabel;
+    Label gainPitchLabel;
     Label velocityLabel;
     Label gainVoiceLabel;
     Label gainSynthLabel;

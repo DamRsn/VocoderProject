@@ -68,13 +68,15 @@ VocoderProcess::~VocoderProcess() {}
 
 int VocoderProcess::getLatency(int samplesPerBlock)
 {
-
+    // TODO: Do something, PGCD?
     int latency;
     if(samplesPerBlock <= hop)
         latency = wlen - samplesPerBlock;
     else
         latency = wlen;
 
+    // Bypass everything: set latency to wlen so we are shure no pb since samples per block > 0
+    latency = wlen;
     return latency;
 }
 
@@ -89,43 +91,34 @@ void VocoderProcess::setWindows(std::string windowType)
 
     double overlapFactor = 1.0;
 
-    if (abs(overlap - 0.75) < pow(10, -10))
-    {
+    if (abs(overlap - 0.75) < pow(10, -10)){
         overlapFactor = 1.0/sqrt(2);
     }
 
     if (abs(overlap - 0.75) > pow(10, -10) &&
-        abs(overlap - 0.5) > pow(10, -10))
-    {
+        abs(overlap - 0.5) > pow(10, -10)){
         std::cout << "Invalid overlap" << std::endl;
         assert(false);
     }
 
-    if (windowType=="hann")
-    {
+    if (windowType=="hann"){
         //std::cout << "Window type is hann" << std::endl;
         dsp::WindowingFunction<double>::fillWindowingTables(&stWindow[0], wlen,
                                                            dsp::WindowingFunction<double>::hann,false);
         for (int i = 0; i < wlen; i++)
-        {
             stWindow[i] *= overlapFactor;
-        }
+
 
         std::fill(anWindow.begin(), anWindow.end(), 1.0);
     }
-
-    else if (windowType=="sine")
-    {
+    else if (windowType=="sine"){
         //std::cout << "Window type is sine" << std::endl;
-        for (int i = 0; i < wlen; i++)
-        {
+        for (int i = 0; i < wlen; i++){
             anWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
             stWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
         }
     }
-
-    else
-    {
+    else{
         std::cerr << "Unknown window type" << std::endl;
         assert(false);
     }
@@ -134,8 +127,7 @@ void VocoderProcess::setWindows(std::string windowType)
 
 void VocoderProcess::setOrderVoice()
 {
-    if (audioProcPtr->orderVoice > orderMaxVoice)
-    {
+    if (audioProcPtr->orderVoice > orderMaxVoice){
         std::cout << "New order for LPC Voice is larger than OrderMax" << std::endl;
         assert(false);
     }
@@ -146,8 +138,7 @@ void VocoderProcess::setOrderVoice()
 
 void VocoderProcess::setOrderSynth()
 {
-    if (audioProcPtr->orderSynth > orderMaxSynth)
-    {
+    if (audioProcPtr->orderSynth > orderMaxSynth){
         std::cout << "New order for LPC Synth is larger than OrderMax" << std::endl;
         assert(false);
     }
@@ -158,14 +149,12 @@ void VocoderProcess::setOrderSynth()
 void VocoderProcess::process(MyBuffer &myBuffer)
 {
     // Get slider values
-    gainBeforeIIR = Decibels::decibelsToGain(audioProcPtr->gain);
     gainVoice = Decibels::decibelsToGain(audioProcPtr->gainVoice);
     gainSynth = Decibels::decibelsToGain(audioProcPtr-> gainSynth);
     gainVocoder = Decibels::decibelsToGain(audioProcPtr->gainVocoder);
 
     // Call process window
-    while (startSample < myBuffer.getSamplesPerBlock())
-    {
+    while (startSample < myBuffer.getSamplesPerBlock()){
         processWindow(myBuffer);
         startSample += hop;
     }
@@ -210,12 +199,10 @@ void VocoderProcess::filterFIR(MyBuffer& myBuffer, double (MyBuffer::*getSample)
 {
     // Get excitation signal and its energy on current window
     E = 0.0;
-    for (int i = 0; i < wlen; i++)
-    {
+    for (int i = 0; i < wlen; i++){
         e[i] = a[0] * (myBuffer.*getSample)(0, startSample + i) * anWindow[i];
 
-        for (int k = 1; k < order + 1; k++)
-        {
+        for (int k = 1; k < order + 1; k++){
             if (i - k >= 0)
                 e[i] += (myBuffer.*getSample)(0, startSample + i - k) * anWindow[i - k] * a[k];
             else
@@ -238,7 +225,7 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     EeVoiceArr[0] = EeVoice;
     EeSynthArr[0] = EeSynth;
 
-
+    // TODO: this is shit if using something that is not a synth
     if (EeSynth > pow(10, -2))
         // For now lambda is 0
         g = sqrt(sum(EeVoiceArr)/sum(EeSynthArr));
@@ -246,13 +233,11 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     else
         g = 0.0;
 
-    for (int i = 0; i < wlen; i++)
-    {
+    for (int i = 0; i < wlen; i++){
         // get first sample and apply gain computed with energy of voice and synth (g)
         // and gain from a slider command (gainBeforeIIR)
-        out[i] =  gainBeforeIIR * g * eSynth[i];
+        out[i] =  g * eSynth[i];
 
-        // Todo: THIS IS WHERE EXPLOSIONS OFTEN OCCUR: IIR FILTER
         for (int k = 1; k < order + 1; k++) {
             if (i-k >= 0)
                 out[i] -= out[i-k] * a[k];
@@ -262,8 +247,7 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     }
 
     // Add samples to output buffer
-    for (int channel = 0; channel < myBuffer.getNumChannels(); channel++)
-    {
+    for (int channel = 0; channel < myBuffer.getNumChannels(); channel++){
         for (int i = 0; i < wlen; i++) {
             myBuffer.addOutSample(channel, startSample + i,
                                   (gainVocoder * out[i] +
@@ -288,8 +272,7 @@ double sum(const std::vector<double>& v)
 double maxAbs(const std::vector<double>& v)
 {
     double max = 0.0;
-    for (auto& n : v)
-    {
+    for (auto& n : v){
         if (abs(n) > max)
             max = abs(n);
     }
@@ -300,9 +283,8 @@ double maxAbs(const std::vector<double>& v)
 void shift(std::vector<double>& v)
 {
     for (int i = v.size()-1; i>0; i--)
-    {
         v[i]=v[i-1];
-    }
+
     v[0]=0.0;
 }
 

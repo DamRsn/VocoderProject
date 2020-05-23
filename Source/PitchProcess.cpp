@@ -85,6 +85,10 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
     prevAnMarks.reserve(marksPerWindowMax);
     stMarks.reserve(marksPerWindowMax);
     prevStMarks.reserve(marksPerWindowMax);
+    anMarks.resize(0);
+    prevAnMarks.resize(0);
+    stMarks.resize(0);
+    prevStMarks.resize(0);
 
     a.resize(orderMax+1, 0.0);
     aPrev.resize(orderMax+1, 0.0);
@@ -101,14 +105,14 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
 }
 
 
-void PitchProcess::process2(MyBuffer &myBuffer)
+void PitchProcess::process(MyBuffer &myBuffer)
 {
     if (bufferIdxMax==0)
         bufferIdxMax = myBuffer.getIdxMax();
 
     while(startSample < myBuffer.getSamplesPerBlock())
     {
-        if (nChunk%chunksPerFrame == chunksPerFrame -1){
+        if (nChunk%chunksPerFrame == chunksPerFrame - 1){
             processChunkCont(myBuffer);
             nChunk = 0;
             processChunkStart(myBuffer);
@@ -126,7 +130,6 @@ void PitchProcess::process2(MyBuffer &myBuffer)
         }
 
         startSample += chunkSize;
-
     }
     startSample -= myBuffer.getSamplesPerBlock();
 }
@@ -165,7 +168,7 @@ void PitchProcess::fillOutputBuffer(MyBuffer& myBuffer)
     for (int channel = 0; channel < myBuffer.getNumChannels(); channel++) {
         for (int i = 0; i < chunkSize; i++) {
             myBuffer.addOutSample(channel, startSample + i, outFrame[i + nChunk * chunkSize]
-                                                            * stWindow[i + nChunk * chunkSize]);
+                    * stWindow[i + nChunk * chunkSize] * Decibels::decibelsToGain(audioProcPtr->gainPitch));
         }
     }
 }
@@ -554,8 +557,16 @@ int PitchProcess::getClosestAnMarkIdx(const std::vector<int>& anMarks, const std
     else if (idx==0)
         closestIdx = idx;
 
-    else if (idx==anMarks.size())
-        closestIdx = idx - 1;
+    else if (idx==anMarks.size()){
+        if (anMarks[idx] + periodPsola - nChunk * chunkSize < bufferIdxMax - startSample)
+            closestIdx = idx - 1;
+        else
+            if (idx - 2 >=0)
+                closestIdx = idx-2;
+            else
+                assert(false);
+    }
+
     else
     {
         std::cout << "anMarks= " << anMarks;
@@ -576,10 +587,8 @@ void PitchProcess::interp(vector<double> &x, const vector<double> &y, std::vecto
     int lbIdx;
     double value;
     //std::cout << "in interp";
-    for (int i = startIdx; i < stopIdx; i++)
-    {
-        if (i >= x.front() && i <= x.back())
-        {
+    for (int i = startIdx; i < stopIdx; i++){
+        if (i >= x.front() && i <= x.back()){
             // Find interval
             lb = std::lower_bound(startSearchIt, x.end(), i);
 
@@ -618,12 +627,9 @@ void PitchProcess::buildWindows(std::vector<double>& anWindow, std::vector<doubl
                                                         dsp::WindowingFunction<double>::hann,false);
 
     for (int i=0; i < int(frameLen - 2*int(round(overlap*frameLen))); i++)
-    {
         stWindow.insert(stWindow.begin() + int(round(overlap*frameLen)), 1.0);
-    }
 
-    if (stWindow.size() != frameLen)
-    {
+    if (stWindow.size() != frameLen){
         std::cout << "stWindow.size() != frameLen" << std::endl;
         assert(false);
     }

@@ -24,7 +24,7 @@ public:
     void prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, double sampleRate_, int numChannels_);
 
     void fillInputBuffers(const AudioBuffer<float>& voiceBuffer, const AudioBuffer<float>& synthBuffer);
-    void fillOutputBuffer(AudioBuffer<float>& buffer);
+    void fillOutputBuffer(AudioBuffer<float>& buffer, int nOutputChannels);
 
     double getVoiceSample(int channel, int idx) const;
     double getSynthSample(int channel, int idx) const;

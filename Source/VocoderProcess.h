@@ -62,7 +62,6 @@ private:
     double lambda;
 
     // Different gain to apply
-    double gainBeforeIIR;
     double gainVoice;
     double gainVocoder;
     double gainSynth;

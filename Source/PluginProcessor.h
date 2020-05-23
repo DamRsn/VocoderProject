@@ -65,7 +65,7 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    float gain;
+    float gainPitch;
     float velocity;
     float gainSynth;
     float gainVocoder;
