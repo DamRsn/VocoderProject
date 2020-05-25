@@ -17,7 +17,7 @@ VocoderAudioProcessor::VocoderAudioProcessor()
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  AudioChannelSet::stereo(), true)
+                       .withInput  ("Input",  AudioChannelSet::mono(), true)
 
 #endif
                        .withOutput ("Output", AudioChannelSet::stereo(), true)
@@ -28,17 +28,8 @@ VocoderAudioProcessor::VocoderAudioProcessor()
                        )
 #endif
 {
-
     vocoderProcess.setAudioProcPtr(this);
     pitchProcess.setAudioProcPtr(this);
-    mySynth.clearVoices();
-    for (int i = 0; i < 10; i++)
-    {
-        mySynth.addVoice(new SynthVoice());
-    }
-    mySynth.clearSounds();
-    
-    mySynth.addSound(new SynthSound());
     orderMaxVoice = 100;
     orderMaxSynth = 30;
 
@@ -113,13 +104,15 @@ void VocoderAudioProcessor::changeProgramName (int index, const String& newName)
 //==============================================================================
 void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
     ignoreUnused(samplesPerBlock);
-    lastSampleRate = sampleRate;
-    mySynth.setCurrentPlaybackSampleRate(lastSampleRate);
-
-    synthBuffer.setSize(2, samplesPerBlock);
 
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+
+    if (totalNumInputChannels != 3 && totalNumOutputChannels != 2)
+    {
+        std::cerr << "Wrong number of input or output channel. " << std::endl;
+        assert(false);
+    }
 
     // Ratio of sampling rate to get correct size for different arrays ...
     double ratioSR = sampleRate/44100.0;
@@ -144,12 +137,17 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     vocoderProcess.prepare(wlenVoc, hopVoc, orderVoice, orderMaxVoice, window_str);
 
     int latency = std::max(pitchProcess.getLatency(samplesPerBlock), vocoderProcess.getLatency(samplesPerBlock));
-    int samplesToKeep = floor(1024.0 * ratioSR);
+    int samplesToKeep = frameLenPitch;
 
-    myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, totalNumOutputChannels);
+    // TODO: this was here just for test
+    latency = vocoderProcess.getLatency(samplesPerBlock);
+    samplesToKeep = 0;
+
+
+    myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, 1, 2,
+            totalNumOutputChannels);
 
     setLatencySamples(latency);
-
 }
 
 void VocoderAudioProcessor::releaseResources() {}
@@ -157,7 +155,10 @@ void VocoderAudioProcessor::releaseResources() {}
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool VocoderAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-    if (layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet() && ! layouts.getChannelSet(true, 1).isDisabled()) {
+    if (layouts.getMainInputChannelSet() == AudioChannelSet::mono() &&
+    layouts.getMainOutputChannelSet() == AudioChannelSet::stereo() &&
+    !layouts.getChannelSet(true, 1).isDisabled())
+    {
         return true;
     }
     else {
@@ -175,20 +176,13 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     auto voiceBuffer = getBusBuffer(buffer, true, 0);
     auto synthBuffer = getBusBuffer(buffer, true, 1);
 
-    /*
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
-
-    synthBuffer.clear();
-    mySynth.renderNextBlock(synthBuffer, midiMessages, 0, synthBuffer.getNumSamples());
-    */
-
     myBuffer.fillInputBuffers(voiceBuffer, synthBuffer);
 
     vocoderProcess.process(myBuffer);
-    pitchProcess.process(myBuffer);
+    //pitchProcess.process(myBuffer);
 
     myBuffer.fillOutputBuffer(buffer, nOutputChannels);
+
 }
 
 //==============================================================================

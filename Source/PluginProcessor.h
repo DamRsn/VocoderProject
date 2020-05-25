@@ -11,10 +11,6 @@
 #pragma once
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "maximilian.h"
-#include "SynthSound.h"
-#include "SynthVoice.h"
-#include "add_func.h"
 #include "MyBuffer.h"
 #include "VocoderProcess.h"
 #include "PitchProcess.h"
@@ -76,12 +72,6 @@ public:
     int orderMaxSynth;
 
 private:
-    Synthesiser mySynth;
-    SynthVoice* myVoice;
-    double lastSampleRate;
-    
-    AudioBuffer<float> synthBuffer;
-
     // To handle the variable buffer size and latency
     MyBuffer myBuffer;
 

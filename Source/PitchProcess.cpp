@@ -165,7 +165,7 @@ void PitchProcess::processChunkStart(MyBuffer& myBuffer)
 
 void PitchProcess::fillOutputBuffer(MyBuffer& myBuffer)
 {
-    for (int channel = 0; channel < myBuffer.getNumChannels(); channel++) {
+    for (int channel = 0; channel < myBuffer.getNumOutChannels(); channel++) {
         for (int i = 0; i < chunkSize; i++) {
             myBuffer.addOutSample(channel, startSample + i, outFrame[i + nChunk * chunkSize]
                     * stWindow[i + nChunk * chunkSize] * Decibels::decibelsToGain(audioProcPtr->gainPitch));
@@ -205,7 +205,7 @@ void PitchProcess::yin(MyBuffer& myBuffer)
         yinTemp[k] *= k/tmp;
     }
 
-    int tau = floor(fS/fMax);
+    int tau = floor(fS/fMax);\
 
     while(tau < tauMax){
         if (yinTemp[tau] < yinTol){
@@ -430,7 +430,8 @@ void PitchProcess::psola(MyBuffer& myBuffer)
     int stMark, clIdx, clAnMark, startIdx, stopIdx;
     periodSamples.resize(2*periodPsola+1);
     xInterp.resize(2*periodPsola+1);
-    fillPsolaWindow(psolaWindow, period);
+    fillPsolaWindow(psolaWindow, periodPsola);
+
 
     while(stMarkIdx < stMarks.size()){
         stMark = stMarks[stMarkIdx];
@@ -579,14 +580,14 @@ int PitchProcess::getClosestAnMarkIdx(const std::vector<int>& anMarks, const std
 }
 
 
-void PitchProcess::interp(vector<double> &x, const vector<double> &y, std::vector<double>& outFrame,
-        const vector<double>& psolaWindow, const int& startIdx, const int &stopIdx)
+void PitchProcess::interp(std::vector<double> &x, const std::vector<double> &y, std::vector<double>& outFrame,
+        const std::vector<double>& psolaWindow, const int& startIdx, const int &stopIdx)
 {
     auto startSearchIt = x.begin();
     std::vector<double>::iterator lb;
     int lbIdx;
     double value;
-    //std::cout << "in interp";
+
     for (int i = startIdx; i < stopIdx; i++){
         if (i >= x.front() && i <= x.back()){
             // Find interval
@@ -601,7 +602,7 @@ void PitchProcess::interp(vector<double> &x, const vector<double> &y, std::vecto
             else
                 value = y[lbIdx];
 
-            outFrame[i] += value;// * psolaWindow[i - startIdx];
+            outFrame[i] += value;
         }
 
         else if (i > x.back())

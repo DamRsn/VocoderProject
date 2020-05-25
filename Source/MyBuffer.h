@@ -21,7 +21,8 @@ public:
     MyBuffer();
     ~MyBuffer();
 
-    void prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, double sampleRate_, int numChannels_);
+    void prepare(int samplesPerBlock, int samplesToKeep, int latency, double sampleRate, int numChannelsInVoice, int
+    numChannelsInSynth, int numChannelsOut);
 
     void fillInputBuffers(const AudioBuffer<float>& voiceBuffer, const AudioBuffer<float>& synthBuffer);
     void fillOutputBuffer(AudioBuffer<float>& buffer, int nOutputChannels);
@@ -35,7 +36,7 @@ public:
     int getSamplesPerBlock() const{return samplesPerBlock;}
     int getLatency() const{return latency;}
     int getIdxMax() const {return latency + samplesPerBlock;}
-    int getNumChannels() const{return numChannels;}
+    int getNumOutChannels() const{return numChannelsOut;}
 
     void clearOutput(int channel, int numSamples);
 
@@ -49,7 +50,10 @@ private:
 
     int inSize;
     int outSize;
-    int numChannels;
+
+    int numChannelsInVoice;
+    int numChannelsInSynth;
+    int numChannelsOut;
 
     // from which idx to write samplesPerblock samples on mInputVoice and mInputSynth buffers
     int inCounter;

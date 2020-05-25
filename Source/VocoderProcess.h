@@ -16,7 +16,6 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
-#include "add_func.h"
 #include "LPC.h"
 
 class VocoderAudioProcessor;

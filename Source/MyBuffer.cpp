@@ -14,22 +14,26 @@ MyBuffer::MyBuffer() {}
 
 MyBuffer::~MyBuffer(){}
 
-void MyBuffer::prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, double sampleRate_, int numChannels_)
+void MyBuffer::prepare(int samplesPerBlock, int samplesToKeep, int latency, double sampleRate, int
+numChannelsInVoice, int numChannelsInSynth, int numChannelsOut)
 {
-    samplesPerBlock = samplesPerBlock_;
-    samplesToKeep = samplesToKeep_;
-    sampleRate = sampleRate_;
-    latency = latency_;
-    numChannels = numChannels_;
+    //TODO: deal with number of channels
+    this->samplesPerBlock = samplesPerBlock;
+    this->samplesToKeep = samplesToKeep;
+    this->sampleRate = sampleRate;
+    this->latency = latency;
+    this->numChannelsInVoice = numChannelsInVoice;
+    this->numChannelsInSynth = numChannelsInSynth;
+    this->numChannelsOut = numChannelsOut;
 
 
     inSize = samplesToKeep + samplesPerBlock + latency;
     outSize = samplesPerBlock + latency;
 
-    mInputVoice.setSize(2, inSize);
-    mInputSynth.setSize(2, inSize);
+    mInputVoice.setSize(numChannelsInVoice, inSize);
+    mInputSynth.setSize(numChannelsInSynth, inSize);
 
-    mOutput.setSize(numChannels, outSize);
+    mOutput.setSize(numChannelsOut, outSize);
 
     // Set everything to 0
     mInputVoice.clear();
@@ -45,19 +49,26 @@ void MyBuffer::prepare(int samplesPerBlock_, int samplesToKeep_, int latency_, d
 void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const AudioBuffer<float> &synthBuffer)
 {
     int numSamples = voiceBuffer.getNumSamples();
-    for(int channel = 0; channel < numChannels; channel++) {
+    for(int channel = 0; channel < numChannelsInVoice; channel++) {
         auto *voiceReadPtr = voiceBuffer.getReadPointer(channel);
         auto *inVoiceWrtPtr = mInputVoice.getWritePointer(channel, 0);
 
         for (int i = 0; i < numSamples; i++)
             inVoiceWrtPtr[(inCounter + i) % inSize] = voiceReadPtr[i];
 
+    }
 
+    for(int channel = 0; channel < numChannelsInSynth; channel++) {
         auto* synthReadPtr = synthBuffer.getReadPointer(channel);
         auto* inSynthWrtPtr = mInputSynth.getWritePointer(channel, 0);
 
-        for (int i=0; i < numSamples; i++)
-            inSynthWrtPtr[(inCounter + i)%inSize] = synthReadPtr[i];
+        if (synthReadPtr!=NULL) {
+            for (int i = 0; i < numSamples; i++)
+                inSynthWrtPtr[(inCounter + i) % inSize] = synthReadPtr[i];
+        }
+        else
+            for (int i = 0; i < numSamples; i++)
+                inSynthWrtPtr[(inCounter + i) % inSize] = 0.0;
 
     }
 }
@@ -66,30 +77,16 @@ void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const Aud
 void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer, int nOutputChannels)
 {
     buffer.clear();
-    double value;
     for(int channel = 0; channel < nOutputChannels; channel++) {
         auto* channelData = buffer.getWritePointer(channel, 0);
-        for (int sample = 0; sample < samplesPerBlock; sample++) {
-            value = getOutSample(channel, sample);
-            channelData[sample] = value;
-        }
+        for (int sample = 0; sample < samplesPerBlock; sample++)
+            channelData[sample] = getOutSample(channel, sample);
         
         // Clear stuffs that have just been written to buffer
         clearOutput(channel, samplesPerBlock);
     }
-    
-    for (int channel = nOutputChannels; channel < buffer.getNumChannels(); channel ++)
-        buffer.clear (channel, 0, buffer.getNumSamples());
-    
-    int numChannelsBuf = buffer.getNumChannels();
-    for (int channel= 0; channel < numChannelsBuf; channel ++)
-    {
-        
-        auto mag = buffer.getMagnitude(channel, 0, buffer.getNumSamples());
-        auto rms = buffer.getRMSLevel(channel, 0, buffer.getNumSamples());
-        
-        std::cout << "mag: " << mag << "\r";
-    }
+
+
     // update outCounter, inCounter and currCounter
     outCounter = (outCounter + samplesPerBlock)%outSize;
     inCounter = (inCounter + samplesPerBlock)%inSize;
@@ -99,11 +96,13 @@ void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer, int nOutputChannels)
 
 double MyBuffer::getVoiceSample(int channel, int idx) const
 {
+    /*
     if (idx < -samplesToKeep || idx >= (samplesPerBlock + latency)) {
         std::cerr << "idx out of range in getVoiceSample()." << std::endl;
         std::cerr << "idx: " << idx << std::endl;
         assert(false);
     }
+     */
 
     return mInputVoice.getSample(channel, (currCounter + idx + inSize)%inSize);
 }
@@ -111,10 +110,12 @@ double MyBuffer::getVoiceSample(int channel, int idx) const
 
 double MyBuffer::getSynthSample(int channel, int idx) const
 {
+    /*
     if (idx < -samplesToKeep || idx >= (samplesPerBlock + latency)) {
         std::cerr << "idx out of range in getSynthSample()." << std::endl;
         assert(false);
     }
+     */
 
     return mInputSynth.getSample(channel, (currCounter + idx + inSize)%inSize);
 }
@@ -122,21 +123,24 @@ double MyBuffer::getSynthSample(int channel, int idx) const
 
 void MyBuffer::addOutSample(int channel, int idx, double value)
 {
+     /*
     if (idx < 0 || idx >= (outSize)) {
         std::cerr << "idx out of range in addOutSample()." << std::endl;
         assert(false);
     }
-
+    */
     mOutput.addSample(channel, (outCounter + idx)%outSize, value);
 }
 
 
 double MyBuffer::getOutSample(int channel, int idx) const
 {
+    /*
     if (idx < 0 || idx >= (outSize)) {
         std::cerr << "idx out of range in getOutSample()." << std::endl;
         assert(false);
     }
+     */
     
     return mOutput.getSample(channel, (outCounter + idx)%outSize);;
 }

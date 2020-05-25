@@ -247,7 +247,7 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     }
 
     // Add samples to output buffer
-    for (int channel = 0; channel < myBuffer.getNumChannels(); channel++){
+    for (int channel = 0; channel < myBuffer.getNumOutChannels(); channel++){
         for (int i = 0; i < wlen; i++) {
             myBuffer.addOutSample(channel, startSample + i,
                                   (gainVocoder * out[i] +

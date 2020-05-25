@@ -41,7 +41,7 @@ public:
     samplesPerBlock, Notes::key key);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
     int getLatency(int samplesPerBlock);
-    int getSampleToKepp();
+    int getSampleToKeep();
 
     //void process(MyBuffer& myBuffer);
     void process(MyBuffer& myBuffer);
