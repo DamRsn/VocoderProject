@@ -140,8 +140,8 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     int samplesToKeep = frameLenPitch;
 
     // TODO: this was here just for test
-    latency = vocoderProcess.getLatency(samplesPerBlock);
-    samplesToKeep = 0;
+    //latency = vocoderProcess.getLatency(samplesPerBlock);
+    //samplesToKeep = 0;
 
 
     myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, 1, 2,
@@ -179,7 +179,7 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     myBuffer.fillInputBuffers(voiceBuffer, synthBuffer);
 
     vocoderProcess.process(myBuffer);
-    //pitchProcess.process(myBuffer);
+    pitchProcess.process(myBuffer);
 
     myBuffer.fillOutputBuffer(buffer, nOutputChannels);
 

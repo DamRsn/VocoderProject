@@ -48,8 +48,9 @@ public:
 
 private:
 
-    void yin(MyBuffer& myBuffer);
-    void pitchMarks(MyBuffer& myBuffer);
+    void yin(const MyBuffer& myBuffer);
+    void computeYinTemp(const MyBuffer& myBuffer, std::vector<double>& yinTemp);
+    void pitchMarks(const MyBuffer& myBuffer);
     void placeStMarks();
     void psola(MyBuffer& myBuffer);
 

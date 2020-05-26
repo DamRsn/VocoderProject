@@ -174,7 +174,32 @@ void PitchProcess::fillOutputBuffer(MyBuffer& myBuffer)
 }
 
 
-void PitchProcess::yin(MyBuffer& myBuffer)
+void PitchProcess::computeYinTemp(const MyBuffer& myBuffer, std::vector<double>& yinTemp)
+{
+    double value_i;
+    std::fill(yinTemp.begin(), yinTemp.end(), 0.0);
+
+    for (int i = 0; i < frameLen; i++) {
+        value_i = myBuffer.getVoiceSample(0, startSample + i - tauMax);
+        for (int k = 0; k < tauMax; k++){
+            yinTemp[k] += pow(value_i - myBuffer.getVoiceSample(0, startSample + i + k - tauMax),
+                    2);
+        }
+    }
+
+    yinTemp[0] = 1.0;
+    double tmp = 0;
+
+    for (int k = 1; k < tauMax; k++){
+        tmp += yinTemp[k];
+        yinTemp[k] *= k/tmp;
+    }
+
+
+}
+
+
+void PitchProcess::yin(const MyBuffer& myBuffer)
 {
     // Update tau (lag value corresponding to pitch period in number of sample), if no pitch found, tau = tauMax
     // Update pitch variable
@@ -189,23 +214,9 @@ void PitchProcess::yin(MyBuffer& myBuffer)
     pitch = 0;
     period = 0;
 
-    for (int k = 0; k < tauMax; k++){
-        yinTemp[k] = 0;
-        for (int i = 0; i < frameLen; i++) {
-            yinTemp[k] += pow(myBuffer.getVoiceSample(0, startSample + i - tauMax)
-                                - myBuffer.getVoiceSample(0, startSample + i + k - tauMax), 2);
-        }
-    }
+    computeYinTemp(myBuffer, yinTemp);
 
-    yinTemp[0] = 1.0;
-    double tmp = 0;
-
-    for (int k = 1; k < tauMax; k++){
-        tmp += yinTemp[k];
-        yinTemp[k] *= k/tmp;
-    }
-
-    int tau = floor(fS/fMax);\
+    int tau = floor(fS/fMax);
 
     while(tau < tauMax){
         if (yinTemp[tau] < yinTol){
@@ -224,7 +235,7 @@ void PitchProcess::yin(MyBuffer& myBuffer)
 }
 
 
-void PitchProcess::pitchMarks(MyBuffer& myBuffer)
+void PitchProcess::pitchMarks(const MyBuffer& myBuffer)
 {
     // Copy content of anMarks to prevAnMarks and clear anMarks, there should be no memory allocation
     prevAnMarks = anMarks;

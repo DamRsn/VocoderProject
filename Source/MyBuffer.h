@@ -69,4 +69,6 @@ private:
     AudioBuffer<double> mInputSynth;
     AudioBuffer<double> mOutput;
 
+    const double* voiceReadPtr;
+
 };

@@ -23,10 +23,9 @@ void lpc(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std:
 void biaisedAutoCorr(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const, std::vector<double> &r,
                     const int& order,  const int& wlen, const int& startSample, const std::vector<double>& anWindow)
 {
+    std::fill(r.begin(), r.end(), 0.0);
     for (int m = 0; m < order + 1; m++)
     {
-        r[m] = 0;
-
         for (int n = 0; n <  wlen - m; n++)
         {
             r[m] += (myBuffer.*getSample)(0, startSample + n) * anWindow[n] *

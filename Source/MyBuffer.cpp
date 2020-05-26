@@ -17,7 +17,6 @@ MyBuffer::~MyBuffer(){}
 void MyBuffer::prepare(int samplesPerBlock, int samplesToKeep, int latency, double sampleRate, int
 numChannelsInVoice, int numChannelsInSynth, int numChannelsOut)
 {
-    //TODO: deal with number of channels
     this->samplesPerBlock = samplesPerBlock;
     this->samplesToKeep = samplesToKeep;
     this->sampleRate = sampleRate;
@@ -43,6 +42,8 @@ numChannelsInVoice, int numChannelsInSynth, int numChannelsOut)
     inCounter = samplesToKeep + latency;
     outCounter = 0;
     currCounter = samplesToKeep;
+
+    voiceReadPtr = mInputVoice.getReadPointer(0);
 }
 
 
@@ -104,7 +105,8 @@ double MyBuffer::getVoiceSample(int channel, int idx) const
     }
      */
 
-    return mInputVoice.getSample(channel, (currCounter + idx + inSize)%inSize);
+    // return mInputVoice.getSample(channel, (currCounter + idx + inSize)%inSize);
+    return voiceReadPtr[(currCounter + idx + inSize)%inSize];
 }
 
 
@@ -148,8 +150,12 @@ double MyBuffer::getOutSample(int channel, int idx) const
 
 void MyBuffer::clearOutput(int channel, int numSamples)
 {
-    auto* wrtPtr = mOutput.getWritePointer(channel, 0);
+    if (outCounter + numSamples < outSize)
+        mOutput.clear(channel, outCounter, numSamples);
 
-    for(int i = 0; i < numSamples; i++)
-        wrtPtr[(outCounter + i)%outSize] = 0.0;
+    else
+    {
+        mOutput.clear(channel, outCounter, outSize-outCounter);
+        mOutput.clear(channel, 0, numSamples - outSize + outCounter);
+    }
 }
