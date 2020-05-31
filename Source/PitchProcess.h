@@ -39,6 +39,7 @@ public:
 
     void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int order, int orderMax, double speed, int
     samplesPerBlock, Notes::key key);
+    void prepare2 (MyBuffer& myBuffer);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
     int getLatency(int samplesPerBlock);
     int getSampleToKeep();
@@ -54,10 +55,6 @@ private:
     void placeStMarks();
     void psola(MyBuffer& myBuffer);
 
-    /*
-    void processStartFrame(MyBuffer& myBuffer);
-    void processContFrame(MyBuffer& myBuffer);
-    */
     void fillOutputBuffer(MyBuffer& myBuffer);
 
     void processChunkCont(MyBuffer& myBuffer);
@@ -75,6 +72,10 @@ private:
     void interp(std::vector<double>& x, const std::vector<double>& y, std::vector<double>& outWindow,
             const std::vector<double>& psolaWindow, const int& startIdx, const int& stopIdx);
 
+    void filterFIR(MyBuffer& myBuffer, int startIdxBuf, int samplesToFilter, int startIdxE);
+    void filterIIR();
+
+
     int frameLen;
     int hop;
     double overlap;
@@ -86,6 +87,9 @@ private:
     int nChunk;
     int chunkSize;
     int chunksPerFrame;
+
+    // Value from myBuffer
+    int samplesToKeep;
 
 
     Notes notes;
@@ -133,7 +137,7 @@ private:
     std::vector<double> a;
     std::vector<double> aPrev;
     std::vector<double> r;
-    std::vector<double> e;
+    std::vector<double> eFrame;
     int order;
     int orderMax;
 
@@ -149,7 +153,8 @@ private:
 
     std::vector<double> xInterp;
 
-    std::vector<double> outFrame;
+    std::vector<double> outEFrame;
+    std::vector<double> yFrame;
 
 
 

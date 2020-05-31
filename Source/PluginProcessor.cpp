@@ -22,18 +22,44 @@ VocoderAudioProcessor::VocoderAudioProcessor()
 #endif
                        .withOutput ("Output", AudioChannelSet::stereo(), true)
                        .withInput  ("Sidechain",  AudioChannelSet::stereo())
-
-
 #endif
-                       )
+                       ),
+treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
     vocoderProcess.setAudioProcPtr(this);
     pitchProcess.setAudioProcPtr(this);
-    orderMaxVoice = 100;
-    orderMaxSynth = 30;
+    //orderMaxVoice = 100;
+    //orderMaxSynth = 30;
 
 }
+
+AudioProcessorValueTreeState::ParameterLayout VocoderAudioProcessor::createParameterLayout()
+{
+    std::vector <std::unique_ptr<RangedAudioParameter>> params;
+
+    auto gainPitchParam = std::make_unique<AudioParameterFloat>("gainPitch", "GainPitch", -60.0f, 6.0f, 0.0f);
+    params.push_back(std::move(gainPitchParam));
+
+    auto gainVoiceParam = std::make_unique<AudioParameterFloat>("gainVoice", "GainVoice", -60.0f, 6.0f, 0.0f);
+    params.push_back(std::move(gainVoiceParam));
+
+    auto gainSynthParam = std::make_unique<AudioParameterFloat>("gainSynth", "GainSynth", -60.0f, 6.0f, 0.0f);
+    params.push_back(std::move(gainSynthParam));
+
+    auto gainVocParam = std::make_unique<AudioParameterFloat>("gainVoc", "GainVoc", -60.0f, 6.0f, 0.0f);
+    params.push_back(std::move(gainVocParam));
+
+    auto lpcVoiceParam = std::make_unique<AudioParameterInt>("lpcVoice", "LpcVoice", 2, 100, 30);
+    params.push_back(std::move(lpcVoiceParam));
+
+    auto lpcSynthParam = std::make_unique<AudioParameterInt>("lpcSynth", "LpcSynth", 2, 30, 5);
+    params.push_back(std::move(lpcSynthParam));
+
+    return { params.begin(), params.end() };
+}
+
+
 
 VocoderAudioProcessor::~VocoderAudioProcessor()
 {
@@ -104,6 +130,15 @@ void VocoderAudioProcessor::changeProgramName (int index, const String& newName)
 //==============================================================================
 void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
     ignoreUnused(samplesPerBlock);
+    /*
+     gainSynth = -60.0;
+     gainVocoder = -60.0;
+     gainVoice = -60.0;
+     orderVoice = 20;
+     orderSynth = 5;
+     orderMaxVoice = 100;
+     orderMaxSynth = 20;
+    */
 
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -129,12 +164,14 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     int hopPitch = 3 * corres_256;
     int frameLenPitch = 4 * corres_256;
 
+    /*
     orderVoice = 15;
     orderSynth = 4;
+     */
 
-    pitchProcess.prepare(sampleRate, 100, 800, frameLenPitch, hopPitch, 10, 15,
+    pitchProcess.prepare(sampleRate, 100, 800, frameLenPitch, hopPitch, 10, 40,
                          0, samplesPerBlock, Notes::Chrom);
-    vocoderProcess.prepare(wlenVoc, hopVoc, orderVoice, orderMaxVoice, window_str);
+    vocoderProcess.prepare(wlenVoc, hopVoc, 0, 0, window_str);
 
     int latency = std::max(pitchProcess.getLatency(samplesPerBlock), vocoderProcess.getLatency(samplesPerBlock));
     int samplesToKeep = frameLenPitch;
@@ -146,6 +183,8 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
 
     myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, 1, 2,
             totalNumOutputChannels);
+
+    pitchProcess.prepare2(myBuffer);
 
     setLatencySamples(latency);
 }

@@ -32,11 +32,13 @@ void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, st
     startSample = 0;
 
     k_iter = 0;
-    this->orderVoice = orderVoice;
-    this->orderMaxVoice = orderMax;
+    this->orderVoice = audioProcPtr->treeState.getRawParameterValue("lpcVoice")->load();
+    this->orderMaxVoice = audioProcPtr->treeState.getParameterRange("lpcVoice").end;
 
-    this->orderMaxSynth = audioProcPtr->orderMaxSynth;
-    this->orderSynth =  audioProcPtr->orderSynth;
+
+    //this->orderMaxSynth = audioProcPtr->orderMaxSynth;
+    this->orderSynth =  audioProcPtr->treeState.getRawParameterValue("lpcSynth")->load();
+    this->orderMaxSynth = audioProcPtr->treeState.getParameterRange("lpcSynth").end;
 
     rVoice.resize(orderMaxVoice + 1, 1.0);
     aVoice.resize(orderMaxVoice + 1, 1.0);
@@ -68,7 +70,7 @@ VocoderProcess::~VocoderProcess() {}
 
 int VocoderProcess::getLatency(int samplesPerBlock)
 {
-    // TODO: Do something, PGCD?
+    // TODO: Do something ?
     int latency;
     if(samplesPerBlock <= hop)
         latency = wlen - samplesPerBlock;
@@ -127,32 +129,29 @@ void VocoderProcess::setWindows(std::string windowType)
 
 void VocoderProcess::setOrderVoice()
 {
-    if (audioProcPtr->orderVoice > orderMaxVoice){
+    auto orderVoicePtr = audioProcPtr->treeState.getRawParameterValue("lpcVoice");
+    orderVoice = orderVoicePtr->load();
+    if (orderVoice > orderMaxVoice){
         std::cout << "New order for LPC Voice is larger than OrderMax" << std::endl;
         assert(false);
     }
 
-    orderVoice = audioProcPtr->orderVoice;
 }
 
 
 void VocoderProcess::setOrderSynth()
 {
-    if (audioProcPtr->orderSynth > orderMaxSynth){
+    auto orderSynthPtr = audioProcPtr->treeState.getRawParameterValue("lpcSynth");
+    orderSynth = orderSynthPtr->load();
+
+    if (orderSynth > orderMaxSynth){
         std::cout << "New order for LPC Synth is larger than OrderMax" << std::endl;
         assert(false);
     }
-
-    orderSynth = audioProcPtr->orderSynth;
 }
 
 void VocoderProcess::process(MyBuffer &myBuffer)
 {
-    // Get slider values
-    gainVoice = Decibels::decibelsToGain(audioProcPtr->gainVoice);
-    gainSynth = Decibels::decibelsToGain(audioProcPtr-> gainSynth);
-    gainVocoder = Decibels::decibelsToGain(audioProcPtr->gainVocoder);
-
     // Call process window
     while (startSample < myBuffer.getSamplesPerBlock()){
         processWindow(myBuffer);
@@ -225,7 +224,7 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     EeVoiceArr[0] = EeVoice;
     EeSynthArr[0] = EeSynth;
 
-    // TODO: this is shit if using something that is not a synth
+    // TODO: this is shit if using something that is not a synth, can do better
     if (EeSynth > pow(10, -2))
         // For now lambda is 0
         g = sqrt(sum(EeVoiceArr)/sum(EeSynthArr));
@@ -234,8 +233,6 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
         g = 0.0;
 
     for (int i = 0; i < wlen; i++){
-        // get first sample and apply gain computed with energy of voice and synth (g)
-        // and gain from a slider command (gainBeforeIIR)
         out[i] =  g * eSynth[i];
 
         for (int k = 1; k < order + 1; k++) {
@@ -246,13 +243,19 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
         }
     }
 
+    auto gainVoc = audioProcPtr->treeState.getRawParameterValue("gainVoc");
+    auto gainVoice = audioProcPtr->treeState.getRawParameterValue("gainVoice");
+    auto gainSynth = audioProcPtr->treeState.getRawParameterValue("gainSynth");
+
     // Add samples to output buffer
     for (int channel = 0; channel < myBuffer.getNumOutChannels(); channel++){
         for (int i = 0; i < wlen; i++) {
             myBuffer.addOutSample(channel, startSample + i,
-                                  (gainVocoder * out[i] +
-                                   gainSynth * myBuffer.getSynthSample(0, startSample + i) * anWindow[i] +
-                                   gainVoice * myBuffer.getVoiceSample(0, startSample + i) * anWindow[i])
+                                  (Decibels::decibelsToGain(gainVoc->load(), -59.0f) * out[i] +
+                                          Decibels::decibelsToGain(gainSynth->load(), 59.0f)
+                                          * myBuffer.getSynthSample(0, startSample + i) * anWindow[i] +
+                                          Decibels::decibelsToGain(gainVoice->load(), 59.0f)
+                                          * myBuffer.getVoiceSample(0, startSample + i) * anWindow[i])
                                   * stWindow[i]);
         }
     }

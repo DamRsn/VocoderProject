@@ -17,6 +17,9 @@
 #include <string>
 #include <math.h>
 
+#define GAIN_PITCH_ID "gainPitch"
+#define GAIN_PITCH_NAME "GainPitch"
+
 
 //==============================================================================
 /**
@@ -61,8 +64,8 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    /*
     float gainPitch;
-    float velocity;
     float gainSynth;
     float gainVocoder;
     float gainVoice;
@@ -70,6 +73,11 @@ public:
     int orderSynth;
     int orderMaxVoice;
     int orderMaxSynth;
+    */
+
+    AudioProcessorValueTreeState treeState;
+
+    AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
 private:
     // To handle the variable buffer size and latency

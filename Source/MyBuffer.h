@@ -33,10 +33,12 @@ public:
     void addOutSample(int channel, int idx, double value);
     double getOutSample(int channel, int idx) const;
 
-    int getSamplesPerBlock() const{return samplesPerBlock;}
-    int getLatency() const{return latency;}
+    int getSamplesPerBlock() const {return samplesPerBlock;}
+    int getLatency() const {return latency;}
     int getIdxMax() const {return latency + samplesPerBlock;}
-    int getNumOutChannels() const{return numChannelsOut;}
+    int getSamplesToKeep() const {return samplesToKeep;}
+    int getNumOutChannels() const {return numChannelsOut;}
+    int getInSize() const {return inSize;}
 
     void clearOutput(int channel, int numSamples);
 

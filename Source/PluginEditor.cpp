@@ -15,24 +15,44 @@
 VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor& p)
     : AudioProcessorEditor (&p), processor (p)
 {
+    pitchSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
+            "gainPitch", gainPitchSlider);
+
+    voiceSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
+                                                                                        "gainVoice", gainVoiceSlider);
+
+    vocoderSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
+                                                                                        "gainVoc", gainVocoderSlider);
+
+    synthSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
+                                                                                        "gainSynth", gainSynthSlider);
+
+    LPCVoiceSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
+                                                                                        "lpcVoice", LPCVoiceSlider);
+
+    LPCSynthSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
+                                                                                        "lpcSynth", LPCSynthSlider);
+
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
     gainPitchSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainPitchSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainPitchSlider.setRange(-60.0f, 6.0f, 0.1f);
-    gainPitchSlider.setValue(0);
-    gainPitchSlider.addListener(this);
+    //gainPitchSlider.setRange(-60.0f, 6.0f, 0.1f);
+    //gainPitchSlider.setValue(0);
+    //gainPitchSlider.addListener(this);
     addAndMakeVisible(gainPitchSlider);
     gainPitchLabel.setText("G Pitch", dontSendNotification);
     gainPitchLabel.attachToComponent(&gainPitchSlider, true);
     addAndMakeVisible(gainPitchLabel);
 
+
     gainVoiceSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainVoiceSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainVoiceSlider.setRange(-60.0f, 6.0f, 0.1f);
-    gainVoiceSlider.setValue(-60);
-    gainVoiceSlider.addListener(this);
+    //gainVoiceSlider.setRange(-60.0f, 6.0f, 0.1f);
+    //gainVoiceSlider.setValue(-60);
+    //gainVoiceSlider.addListener(this);
     addAndMakeVisible(gainVoiceSlider);
     gainVoiceLabel.setText("G Voice", dontSendNotification);
     gainVoiceLabel.attachToComponent(&gainVoiceSlider, true);
@@ -40,9 +60,9 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     
     gainSynthSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainSynthSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainSynthSlider.setRange(-60.0f, 6.0f, 0.1f);
-    gainSynthSlider.setValue(-60);
-    gainSynthSlider.addListener(this);
+    //gainSynthSlider.setRange(-60.0f, 6.0f, 0.1f);
+    //gainSynthSlider.setValue(-60);
+    //gainSynthSlider.addListener(this);
     addAndMakeVisible(gainSynthSlider);
     gainSynthLabel.setText("G Synth", dontSendNotification);
     gainSynthLabel.attachToComponent(&gainSynthSlider, true);
@@ -50,9 +70,9 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     
     gainVocoderSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     gainVocoderSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    gainVocoderSlider.setRange(-60.0f, 6.0f, 0.1f);
-    gainVocoderSlider.setValue(0.0);
-    gainVocoderSlider.addListener(this);
+    //gainVocoderSlider.setRange(-60.0f, 6.0f, 0.1f);
+    //gainVocoderSlider.setValue(0.0);
+    //gainVocoderSlider.addListener(this);
     addAndMakeVisible(gainVocoderSlider);
     gainVocoderLabel.setText("G Voc", dontSendNotification);
     gainVocoderLabel.attachToComponent(&gainVocoderSlider, true);
@@ -61,9 +81,9 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
 
     LPCVoiceSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     LPCVoiceSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    LPCVoiceSlider.setRange(2, processor.orderMaxVoice, 1);
-    LPCVoiceSlider.setValue(15);
-    LPCVoiceSlider.addListener(this);
+    //LPCVoiceSlider.setRange(2, processor.orderMaxVoice, 1);
+    //LPCVoiceSlider.setValue(15);
+    //LPCVoiceSlider.addListener(this);
     addAndMakeVisible(LPCVoiceSlider);
     LPCVoiceLabel.setText("LPC Vx", dontSendNotification);
     LPCVoiceLabel.attachToComponent(&LPCVoiceSlider, true);
@@ -71,15 +91,15 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
 
     LPCSynthSlider.setSliderStyle(Slider::SliderStyle::LinearVertical);
     LPCSynthSlider.setTextBoxStyle(Slider::TextBoxBelow, true, 50, 25);
-    LPCSynthSlider.setRange(2, processor.orderMaxSynth, 1);
-    LPCSynthSlider.setValue(4);
-    LPCSynthSlider.addListener(this);
+    //LPCSynthSlider.setRange(2, processor.orderMaxSynth, 1);
+    //LPCSynthSlider.setValue(4);
+    //LPCSynthSlider.addListener(this);
     addAndMakeVisible(LPCSynthSlider);
     LPCSynthLabel.setText("LPC Sth", dontSendNotification);
     LPCSynthLabel.attachToComponent(&LPCSynthSlider, true);
     addAndMakeVisible(LPCSynthLabel);
     
-    
+
     setSize (900, 300);
 
 }
@@ -104,7 +124,7 @@ void VocoderAudioProcessorEditor::paint (Graphics& g)
 void VocoderAudioProcessorEditor::resized()
 {
     gainPitchSlider.setBoundsRelative(0.1f, 0.0f, 0.1f, 0.8f);
-    //velocitySlider.setBoundsRelative(0.23f, 0.0f,0.1f, 0.8f);
+
     gainVoiceSlider.setBoundsRelative(0.26f, 0.0f, 0.1f, 0.8f);
     gainSynthSlider.setBoundsRelative(0.42f, 0.0f, 0.1f, 0.8f);
     gainVocoderSlider.setBoundsRelative(0.58f, 0.0f, 0.1f, 0.8f);
@@ -113,7 +133,7 @@ void VocoderAudioProcessorEditor::resized()
 
 }
 
-
+/*
 void VocoderAudioProcessorEditor::sliderValueChanged(Slider *slider)
 {
     if (slider == &gainPitchSlider)
@@ -135,3 +155,4 @@ void VocoderAudioProcessorEditor::sliderValueChanged(Slider *slider)
         processor.orderSynth = LPCSynthSlider.getValue();
 
 }
+*/

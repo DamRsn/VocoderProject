@@ -16,7 +16,7 @@
 //==============================================================================
 /**
 */
-class VocoderAudioProcessorEditor  : public AudioProcessorEditor, public Slider::Listener
+class VocoderAudioProcessorEditor  : public AudioProcessorEditor
 {
 public:
     VocoderAudioProcessorEditor (VocoderAudioProcessor&);
@@ -26,28 +26,39 @@ public:
     void paint (Graphics&) override;
     void resized() override;
 
-    void sliderValueChanged(Slider* slider) override;
-
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     VocoderAudioProcessor& processor;
 
     Slider gainPitchSlider;
-    Slider velocitySlider;
-    Slider gainVoiceSlider;
-    Slider gainSynthSlider;
-    Slider gainVocoderSlider;
-    Slider LPCVoiceSlider;
-    Slider LPCSynthSlider;
-
     Label gainPitchLabel;
-    Label velocityLabel;
+
+    Slider gainVoiceSlider;
     Label gainVoiceLabel;
+
+    Slider gainSynthSlider;
     Label gainSynthLabel;
+
+    Slider gainVocoderSlider;
     Label gainVocoderLabel;
+
+    Slider LPCVoiceSlider;
     Label LPCVoiceLabel;
+
+    Slider LPCSynthSlider;
     Label LPCSynthLabel;
+
+
+// another public for destruction order
+public:
+
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> pitchSliderValue;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> voiceSliderValue;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> synthSliderValue;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> vocoderSliderValue;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> LPCVoiceSliderValue;
+    std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> LPCSynthSliderValue;
 
 
 
