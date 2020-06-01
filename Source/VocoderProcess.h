@@ -49,7 +49,6 @@ private:
 
     // Some stuff to print if needed
     double meanAbsE;
-    int k_iter;
 
     double g;
 

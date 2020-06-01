@@ -37,14 +37,12 @@ public:
     PitchProcess();
     ~PitchProcess();
 
-    void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int order, int orderMax, double speed, int
-    samplesPerBlock, Notes::key key);
+    void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock);
     void prepare2 (MyBuffer& myBuffer);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
     int getLatency(int samplesPerBlock);
     int getSampleToKeep();
 
-    //void process(MyBuffer& myBuffer);
     void process(MyBuffer& myBuffer);
 
 private:
@@ -91,7 +89,6 @@ private:
     // Value from myBuffer
     int samplesToKeep;
 
-
     Notes notes;
     Notes::key key;
 
@@ -119,10 +116,6 @@ private:
     int nStMarksOv;
     double beta;
 
-    // Correction speed in ms
-    double speed;
-    double counter;
-
     // Vectors
     // For pitch calculation
     std::vector<double> yinTemp;
@@ -148,16 +141,13 @@ private:
     // vector with hann window for psola
     std::vector<double> psolaWindow;
 
-    // to store 2*period + 1 samples centered on a pitch mark
+    // to store 2 * period + 1 samples centered on a pitch mark
     std::vector<double> periodSamples;
 
     std::vector<double> xInterp;
 
     std::vector<double> outEFrame;
     std::vector<double> yFrame;
-
-
-
 
     // Pointer to pluginProcessor
     VocoderAudioProcessor* audioProcPtr;

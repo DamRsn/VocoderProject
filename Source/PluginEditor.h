@@ -49,6 +49,13 @@ private:
     Slider LPCSynthSlider;
     Label LPCSynthLabel;
 
+    ComboBox keyBox;
+    Label keyBoxLabel;
+
+    TextButton pitchButton;
+
+    TextButton vocButton;
+
 
 // another public for destruction order
 public:
@@ -59,6 +66,11 @@ public:
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> vocoderSliderValue;
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> LPCVoiceSliderValue;
     std::unique_ptr<AudioProcessorValueTreeState::SliderAttachment> LPCSynthSliderValue;
+
+    std::unique_ptr<AudioProcessorValueTreeState::ComboBoxAttachment> keyBoxValue;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> pitchButtonValue;
+    std::unique_ptr<AudioProcessorValueTreeState::ButtonAttachment> vocButtonValue;
+
 
 
 

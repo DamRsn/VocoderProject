@@ -17,9 +17,6 @@
 #include <string>
 #include <math.h>
 
-#define GAIN_PITCH_ID "gainPitch"
-#define GAIN_PITCH_NAME "GainPitch"
-
 
 //==============================================================================
 /**
@@ -64,20 +61,8 @@ public:
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    /*
-    float gainPitch;
-    float gainSynth;
-    float gainVocoder;
-    float gainVoice;
-    int orderVoice;
-    int orderSynth;
-    int orderMaxVoice;
-    int orderMaxSynth;
-    */
-
-    AudioProcessorValueTreeState treeState;
-
     AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    AudioProcessorValueTreeState treeState;
 
 private:
     // To handle the variable buffer size and latency
@@ -86,6 +71,9 @@ private:
     // Class with process function
     VocoderProcess vocoderProcess;
     PitchProcess pitchProcess;
+
+    // GUI
+    foleys::MagicProcessorState magicState { *this, treeState };
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VocoderAudioProcessor)

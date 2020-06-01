@@ -33,6 +33,16 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     LPCSynthSliderValue = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(processor.treeState,
                                                                                         "lpcSynth", LPCSynthSlider);
 
+    keyBoxValue = std::make_unique<AudioProcessorValueTreeState::ComboBoxAttachment>(processor.treeState,
+                                                                                           "keyPitch", keyBox);
+
+    pitchButtonValue = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(processor.treeState,
+                                                                                     "pitchBool", pitchButton);
+
+    vocButtonValue = std::make_unique<AudioProcessorValueTreeState::ButtonAttachment>(processor.treeState,
+                                                                                        "vocBool", vocButton);
+
+
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
@@ -98,6 +108,30 @@ VocoderAudioProcessorEditor::VocoderAudioProcessorEditor (VocoderAudioProcessor&
     LPCSynthLabel.setText("LPC Sth", dontSendNotification);
     LPCSynthLabel.attachToComponent(&LPCSynthSlider, true);
     addAndMakeVisible(LPCSynthLabel);
+
+    keyBox.addItemList(StringArray("A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "Chrom"),
+            0);
+    keyBox.setJustificationType (Justification::centred);
+    addAndMakeVisible (keyBox);
+    keyBoxLabel.setText("Key", dontSendNotification);
+    keyBoxLabel.attachToComponent(&keyBox, true);
+    addAndMakeVisible(keyBoxLabel);
+
+
+    pitchButton.setColour (TextButton::buttonColourId, Colours::red);
+    pitchButton.setColour (TextButton::buttonOnColourId, Colours::green);
+    pitchButton.setClickingTogglesState (true);
+    pitchButton.onClick = [this]() { };
+    addAndMakeVisible (pitchButton);
+
+
+
+    vocButton.setColour (TextButton::buttonColourId, Colours::red);
+    vocButton.setColour (TextButton::buttonOnColourId, Colours::green);
+    vocButton.setClickingTogglesState (true);
+
+    vocButton.onClick = [this]() { };
+    addAndMakeVisible (vocButton);
     
 
     setSize (900, 300);
@@ -125,11 +159,17 @@ void VocoderAudioProcessorEditor::resized()
 {
     gainPitchSlider.setBoundsRelative(0.1f, 0.0f, 0.1f, 0.8f);
 
-    gainVoiceSlider.setBoundsRelative(0.26f, 0.0f, 0.1f, 0.8f);
-    gainSynthSlider.setBoundsRelative(0.42f, 0.0f, 0.1f, 0.8f);
-    gainVocoderSlider.setBoundsRelative(0.58f, 0.0f, 0.1f, 0.8f);
-    LPCSynthSlider.setBoundsRelative(0.74f, 0.0f, 0.1f, 0.8f);
-    LPCVoiceSlider.setBoundsRelative(0.9f, 0.0f, 0.1f, 0.8f);
+    gainVoiceSlider.setBoundsRelative(0.2f, 0.0f, 0.1f, 0.8f);
+    gainSynthSlider.setBoundsRelative(0.3f, 0.0f, 0.1f, 0.8f);
+    gainVocoderSlider.setBoundsRelative(0.4f, 0.0f, 0.1f, 0.8f);
+    LPCSynthSlider.setBoundsRelative(0.5f, 0.0f, 0.1f, 0.8f);
+    LPCVoiceSlider.setBoundsRelative(0.6f, 0.0f, 0.1f, 0.8f);
+
+    keyBox.setBoundsRelative(0.7f, 0.0f, 0.1f, 0.8f);
+
+    pitchButton.setBoundsRelative(0.8f, 0.0f, 0.1f, 0.8f);
+
+    vocButton.setBoundsRelative(0.9f, 0.0f, 0.1f, 0.8f);
 
 }
 

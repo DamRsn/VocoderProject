@@ -26,17 +26,14 @@ void VocoderProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
 }
 
 void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, std::string windowType) {
-    //std::cout.precision(3);
     this->wlen = wlen;
     this->hop = hop;
     startSample = 0;
 
-    k_iter = 0;
     this->orderVoice = audioProcPtr->treeState.getRawParameterValue("lpcVoice")->load();
     this->orderMaxVoice = audioProcPtr->treeState.getParameterRange("lpcVoice").end;
 
 
-    //this->orderMaxSynth = audioProcPtr->orderMaxSynth;
     this->orderSynth =  audioProcPtr->treeState.getRawParameterValue("lpcSynth")->load();
     this->orderMaxSynth = audioProcPtr->treeState.getParameterRange("lpcSynth").end;
 
@@ -104,7 +101,6 @@ void VocoderProcess::setWindows(std::string windowType)
     }
 
     if (windowType=="hann"){
-        //std::cout << "Window type is hann" << std::endl;
         dsp::WindowingFunction<double>::fillWindowingTables(&stWindow[0], wlen,
                                                            dsp::WindowingFunction<double>::hann,false);
         for (int i = 0; i < wlen; i++)
@@ -114,7 +110,6 @@ void VocoderProcess::setWindows(std::string windowType)
         std::fill(anWindow.begin(), anWindow.end(), 1.0);
     }
     else if (windowType=="sine"){
-        //std::cout << "Window type is sine" << std::endl;
         for (int i = 0; i < wlen; i++){
             anWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
             stWindow[i] = overlapFactor * sin((i+0.5)*PI/double(wlen));
@@ -160,10 +155,6 @@ void VocoderProcess::process(MyBuffer &myBuffer)
 
     // Update startSample
     startSample -= myBuffer.getSamplesPerBlock();
-
-    // Variable used to print something every ... iterations
-    k_iter+=1;
-    k_iter%=300;
 }
 
 
@@ -247,6 +238,7 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     auto gainVoice = audioProcPtr->treeState.getRawParameterValue("gainVoice");
     auto gainSynth = audioProcPtr->treeState.getRawParameterValue("gainSynth");
 
+    // TODO: change place of filling voice and synth buffer
     // Add samples to output buffer
     for (int channel = 0; channel < myBuffer.getNumOutChannels(); channel++){
         for (int i = 0; i < wlen; i++) {

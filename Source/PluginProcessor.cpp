@@ -27,34 +27,49 @@ VocoderAudioProcessor::VocoderAudioProcessor()
 treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
+    // Set the pointer to audioProcessor (this) for vocoderProcess and pitchProcess
     vocoderProcess.setAudioProcPtr(this);
     pitchProcess.setAudioProcPtr(this);
-    //orderMaxVoice = 100;
-    //orderMaxSynth = 30;
-
 }
 
 AudioProcessorValueTreeState::ParameterLayout VocoderAudioProcessor::createParameterLayout()
 {
+    /*
+     * Create all the parameters for the value tree state
+     */
+
     std::vector <std::unique_ptr<RangedAudioParameter>> params;
 
     auto gainPitchParam = std::make_unique<AudioParameterFloat>("gainPitch", "GainPitch", -60.0f, 6.0f, 0.0f);
     params.push_back(std::move(gainPitchParam));
 
-    auto gainVoiceParam = std::make_unique<AudioParameterFloat>("gainVoice", "GainVoice", -60.0f, 6.0f, 0.0f);
+    auto gainVoiceParam = std::make_unique<AudioParameterFloat>("gainVoice", "GainVoice", -60.0f, 6.0f, -60.0f);
     params.push_back(std::move(gainVoiceParam));
 
-    auto gainSynthParam = std::make_unique<AudioParameterFloat>("gainSynth", "GainSynth", -60.0f, 6.0f, 0.0f);
+    auto gainSynthParam = std::make_unique<AudioParameterFloat>("gainSynth", "GainSynth", -60.0f, 6.0f, -60.0f);
     params.push_back(std::move(gainSynthParam));
 
     auto gainVocParam = std::make_unique<AudioParameterFloat>("gainVoc", "GainVoc", -60.0f, 6.0f, 0.0f);
     params.push_back(std::move(gainVocParam));
 
-    auto lpcVoiceParam = std::make_unique<AudioParameterInt>("lpcVoice", "LpcVoice", 2, 100, 30);
+    auto lpcVoiceParam = std::make_unique<AudioParameterInt>("lpcVoice", "LpcVoice", 2, 100, 40);
     params.push_back(std::move(lpcVoiceParam));
+
+    auto lpcPitchParam = std::make_unique<AudioParameterInt>("lpcPitch", "LpcPitch", 2, 100, 15);
+    params.push_back(std::move(lpcPitchParam));
 
     auto lpcSynthParam = std::make_unique<AudioParameterInt>("lpcSynth", "LpcSynth", 2, 30, 5);
     params.push_back(std::move(lpcSynthParam));
+
+
+    auto keyPitchParam =  std::make_unique<AudioParameterChoice>("keyPitch", "KeyPitch",
+            StringArray("A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "Chrom"), 12);
+
+    params.push_back(std::move(keyPitchParam));
+
+    params.push_back(std::make_unique<AudioParameterBool>("pitchBool", "PitchBool", true));
+    params.push_back(std::make_unique<AudioParameterBool>("vocBool", "VocBool", true));
+
 
     return { params.begin(), params.end() };
 }
@@ -128,17 +143,9 @@ void VocoderAudioProcessor::changeProgramName (int index, const String& newName)
 }
 
 //==============================================================================
-void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+{
     ignoreUnused(samplesPerBlock);
-    /*
-     gainSynth = -60.0;
-     gainVocoder = -60.0;
-     gainVoice = -60.0;
-     orderVoice = 20;
-     orderSynth = 5;
-     orderMaxVoice = 100;
-     orderMaxSynth = 20;
-    */
 
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -158,28 +165,16 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     std::string window_str = "sine";
     int orderMaxVoc = 100;
 
-
     // Pitch Corrector
     int corres_256 = floor(256.0 * ratioSR);
     int hopPitch = 3 * corres_256;
     int frameLenPitch = 4 * corres_256;
 
-    /*
-    orderVoice = 15;
-    orderSynth = 4;
-     */
-
-    pitchProcess.prepare(sampleRate, 100, 800, frameLenPitch, hopPitch, 10, 40,
-                         0, samplesPerBlock, Notes::Chrom);
+    pitchProcess.prepare(sampleRate, 100, 800, frameLenPitch, hopPitch, samplesPerBlock);
     vocoderProcess.prepare(wlenVoc, hopVoc, 0, 0, window_str);
 
     int latency = std::max(pitchProcess.getLatency(samplesPerBlock), vocoderProcess.getLatency(samplesPerBlock));
     int samplesToKeep = frameLenPitch;
-
-    // TODO: this was here just for test
-    //latency = vocoderProcess.getLatency(samplesPerBlock);
-    //samplesToKeep = 0;
-
 
     myBuffer.prepare(samplesPerBlock, samplesToKeep, latency, sampleRate, 1, 2,
             totalNumOutputChannels);
@@ -216,9 +211,11 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     auto synthBuffer = getBusBuffer(buffer, true, 1);
 
     myBuffer.fillInputBuffers(voiceBuffer, synthBuffer);
+    if (treeState.getRawParameterValue("vocBool")->load())
+        vocoderProcess.process(myBuffer);
 
-    vocoderProcess.process(myBuffer);
-    pitchProcess.process(myBuffer);
+    if (treeState.getRawParameterValue("pitchBool")->load())
+        pitchProcess.process(myBuffer);
 
     myBuffer.fillOutputBuffer(buffer, nOutputChannels);
 
@@ -232,7 +229,8 @@ bool VocoderAudioProcessor::hasEditor() const
 
 AudioProcessorEditor* VocoderAudioProcessor::createEditor()
 {
-    return new VocoderAudioProcessorEditor (*this);
+    return new foleys::MagicPluginEditor (magicState);
+    //return new VocoderAudioProcessorEditor (*this);
 }
 
 //==============================================================================
@@ -241,12 +239,20 @@ void VocoderAudioProcessor::getStateInformation (MemoryBlock& destData)
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
+
+    // MAGIC GUI: let the magicState conveniently handle save and restore the state.
+    //            You don't need to use that, but it also takes care of restoring the last editor size
+    magicState.getStateInformation (destData);
 }
 
 void VocoderAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+
+    // MAGIC GUI: let the magicState conveniently handle save and restore the state.
+    //            You don't need to use that, but it also takes care of restoring the last editor size
+    magicState.setStateInformation (data, sizeInBytes, getActiveEditor());
 }
 
 //==============================================================================

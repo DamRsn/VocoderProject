@@ -36,17 +36,15 @@ void PitchProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
 }
 
 
-void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, int hop, int order, int orderMax,
-        double speed, int samplesPerBlock, Notes::key key)
+void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock)
 {
     this->fMin = fMin;
     this->fMax = fMax;
     this->fS = fS;
     this->frameLen = frameLen;
     this->hop = hop;
-    this->order = order;
-    this->orderMax = orderMax;
-    this->speed = speed;
+    this->order = audioProcPtr->treeState.getRawParameterValue("lpcPitch")->load();;
+    this->orderMax = audioProcPtr->treeState.getParameterRange("lpcPitch").end;
     this->samplesPerBlock = samplesPerBlock;
 
     this->overlap = ((double)(frameLen-hop))/((double)(frameLen));
@@ -67,14 +65,11 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
     this->chunkSize = frameLen - hop;
     this->chunksPerFrame = this->frameLen/chunkSize;
 
-
-    this->key = key;
+    this->key = static_cast<Notes::key>(audioProcPtr->treeState.getRawParameterValue("keyPitch")->load());
     this->outEFrame.resize(frameLen, 0.0);
     this->yFrame.resize(frameLen, 0.0);
 
-
     notes.prepare(key, fMin, fMax);
-
 
     tauMax = (int)ceil(this->fS/this->fMin);
     yinTemp.resize(tauMax, 0.0);
@@ -94,7 +89,6 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
     a.resize(orderMax + 1, 0.0);
     aPrev.resize(orderMax + 1, 0.0);
     r.resize(orderMax + 1, 0.0);
-
 
     psolaWindow.reserve(2 * tauMax + 3);
     periodSamples.reserve(2 * tauMax + 3);
@@ -148,6 +142,10 @@ void PitchProcess::process(MyBuffer &myBuffer)
 
 void PitchProcess::processChunkStart(MyBuffer& myBuffer)
 {
+
+    this->key = static_cast<Notes::key>(audioProcPtr->treeState.getRawParameterValue("keyPitch")->load());
+
+
     std::fill(eFrame.begin(), eFrame.end(), 0.0);
     std::fill(outEFrame.begin(), outEFrame.end(), 0.0);
     std::fill(yFrame.begin(), yFrame.end(), 0.0);
@@ -162,8 +160,7 @@ void PitchProcess::processChunkStart(MyBuffer& myBuffer)
         filterFIR(myBuffer, -samplesToKeep, samplesToKeep + frameLen,0);
         stMarkIdx = 0;
         psola(myBuffer);
-        //std::copy(eFrame.begin() + samplesToKeep, eFrame.begin() + samplesToKeep + chunkSize,
-        //        outEFrame.begin());
+
         filterIIR();
     }
 
@@ -179,11 +176,6 @@ void PitchProcess::processChunkCont(MyBuffer& myBuffer)
                 samplesToKeep + frameLen + (nChunk - 1) * chunkSize);
         psola(myBuffer);
 
-        /*
-        std::copy(eFrame.begin() + samplesToKeep + nChunk * chunkSize,
-                eFrame.begin() + samplesToKeep + (nChunk + 1) * chunkSize,
-                outEFrame.begin() + nChunk * chunkSize);
-        */
         filterIIR();
     }
 
@@ -338,7 +330,6 @@ void PitchProcess::pitchMarks(const MyBuffer& myBuffer)
     // Some ints needed
     int t, l_lim, r_lim, lastMark, sw_c, sw_f;
 
-    // TODO: Check if prevAnMarks empty: use this as a case when there is nothing to do (certain number of unvoiced win)
     // If current frame is voiced
     if (pitch > 1)
     {
@@ -554,9 +545,6 @@ void PitchProcess::psola(MyBuffer& myBuffer)
 
         if (stMarkIdx !=0 && stMarkIdx != stMarks.size()-1){
             for (int j = 0; j < 2 * periodPsola + 1; j++) {
-                //periodSamples[j] = myBuffer.getVoiceSample(0,
-                //        - nChunk * chunkSize + startSample + clAnMark - periodPsola + j)
-                //        * psolaWindow[j];
                 periodSamples[j] = eFrame[samplesToKeep + clAnMark - periodPsola + j] * psolaWindow[j];
 
                 xInterp[j] = stMark + (-periodPsola + j) / beta;
@@ -569,13 +557,8 @@ void PitchProcess::psola(MyBuffer& myBuffer)
         }else if (stMarkIdx == 0){
             for (int j = 0; j < 2 * periodPsola + 1; j++) {
                 if (j < periodPsola)
-                    //periodSamples[j] = myBuffer.getVoiceSample(0,
-                    //                 - nChunk * chunkSize + startSample + clAnMark - periodPsola + j);
                     periodSamples[j] = eFrame[samplesToKeep + clAnMark - periodPsola + j];
                 else
-                    //periodSamples[j] = myBuffer.getVoiceSample(0,
-                    //                    - nChunk * chunkSize + startSample + clAnMark - periodPsola + j)
-                    //        * psolaWindow[j];
                     periodSamples[j] = eFrame[samplesToKeep + clAnMark - periodPsola + j] * psolaWindow[j];
 
                 xInterp[j] = stMark + (- periodPsola + j) / beta;
@@ -588,17 +571,10 @@ void PitchProcess::psola(MyBuffer& myBuffer)
         }else{
             for (int j = 0; j < 2 * periodPsola + 1; j++) {
                 if (j < periodPsola) {
-                    //periodSamples[j] = myBuffer.getVoiceSample(0,
-                    //           - nChunk * chunkSize  + startSample + clAnMark - periodPsola + j)
-                    //        * psolaWindow[j];
                     periodSamples[j] = eFrame[samplesToKeep + clAnMark - periodPsola + j] * psolaWindow[j];
                 }
                 else {
-                    //periodSamples[j] = myBuffer.getVoiceSample(0,
-                    //                                           -nChunk * chunkSize + startSample + clAnMark -
-                    //                                           periodPsola + j);
                     periodSamples[j] = eFrame[samplesToKeep + clAnMark - periodPsola + j];
-
                 }
 
                 xInterp[j] = stMark + (- periodPsola + j) / beta;
@@ -698,7 +674,7 @@ void PitchProcess::interp(std::vector<double> &x, const std::vector<double> &y, 
 
     for (int i = startIdx; i < stopIdx; i++){
         if (i >= x.front() && i <= x.back()){
-            // Find interval
+            // Find interval in log(n)
             lb = std::lower_bound(startSearchIt, x.end(), i);
 
             // update startsearch iterator (because we know that everything is ordered)
@@ -743,8 +719,6 @@ void PitchProcess::buildWindows(std::vector<double>& anWindow, std::vector<doubl
         assert(false);
     }
 }
-
-
 
 
 bool equal(double a, double b)
