@@ -25,7 +25,8 @@ void VocoderProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
     this->audioProcPtr = audioProcPtr;
 }
 
-void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, std::string windowType) {
+void VocoderProcess::prepare(int wlen, int hop, std::string windowType, double silenceThresholdDb)
+{
     this->wlen = wlen;
     this->hop = hop;
     startSample = 0;
@@ -36,6 +37,7 @@ void VocoderProcess::prepare(int wlen, int hop, int orderVoice, int orderMax, st
 
     this->orderSynth =  audioProcPtr->treeState.getRawParameterValue("lpcSynth")->load();
     this->orderMaxSynth = audioProcPtr->treeState.getParameterRange("lpcSynth").end;
+    this->silenceThresholdDb = silenceThresholdDb;
 
     rVoice.resize(orderMaxVoice + 1, 1.0);
     aVoice.resize(orderMaxVoice + 1, 1.0);
@@ -164,6 +166,12 @@ void VocoderProcess::processWindow(MyBuffer &myBuffer)
     setOrderSynth();
     setOrderVoice();
 
+    double RMSVoiceDb = Decibels::gainToDecibels(myBuffer.getRMSLevelVoice(startSample, wlen));
+    double RMSSynthDb = Decibels::gainToDecibels(myBuffer.getRMSLevelSynth(startSample, wlen));
+
+    if (RMSVoiceDb < silenceThresholdDb or RMSSynthDb < silenceThresholdDb)
+        return;
+
     // LPC on Voice
     lpc(myBuffer, &MyBuffer::getVoiceSample, rVoice, aVoice, aPrevVoice, orderVoice,
             wlen, startSample, anWindow);
@@ -215,8 +223,8 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     EeVoiceArr[0] = EeVoice;
     EeSynthArr[0] = EeSynth;
 
-    // TODO: this is shit if using something that is not a synth, can do better
-    if (EeSynth > pow(10, -2))
+    // TODO: this is bad if using something that is not a synth with lots of power, can do better
+    if (EeSynth > pow(10, -4))
         // For now lambda is 0
         g = sqrt(sum(EeVoiceArr)/sum(EeSynthArr));
 
@@ -235,19 +243,12 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
     }
 
     auto gainVoc = audioProcPtr->treeState.getRawParameterValue("gainVoc");
-    auto gainVoice = audioProcPtr->treeState.getRawParameterValue("gainVoice");
-    auto gainSynth = audioProcPtr->treeState.getRawParameterValue("gainSynth");
 
-    // TODO: change place of filling voice and synth buffer
     // Add samples to output buffer
     for (int channel = 0; channel < myBuffer.getNumOutChannels(); channel++){
         for (int i = 0; i < wlen; i++) {
             myBuffer.addOutSample(channel, startSample + i,
-                                  (Decibels::decibelsToGain(gainVoc->load(), -59.0f) * out[i] +
-                                          Decibels::decibelsToGain(gainSynth->load(), 59.0f)
-                                          * myBuffer.getSynthSample(0, startSample + i) * anWindow[i] +
-                                          Decibels::decibelsToGain(gainVoice->load(), 59.0f)
-                                          * myBuffer.getVoiceSample(0, startSample + i) * anWindow[i])
+                                  (Decibels::decibelsToGain(gainVoc->load(), -59.0f) * out[i])
                                   * stWindow[i]);
         }
     }

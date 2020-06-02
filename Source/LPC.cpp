@@ -24,13 +24,23 @@ void biaisedAutoCorr(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int)
                     const int& order,  const int& wlen, const int& startSample, const std::vector<double>& anWindow)
 {
     std::fill(r.begin(), r.end(), 0.0);
+
+    double tmp;
+    for (int n=0; n < wlen; n++)
+    {
+        tmp = (myBuffer.*getSample)(0, startSample + n) * anWindow[n];
+
+        for (int m = 0; m < order + 1; m++)
+        {
+            if (n >= wlen-m)
+                break;
+            else
+                r[m] +=  tmp * (myBuffer.*getSample)(0, startSample + m + n) * anWindow[m + n];
+        }
+    }
+
     for (int m = 0; m < order + 1; m++)
     {
-        for (int n = 0; n <  wlen - m; n++)
-        {
-            r[m] += (myBuffer.*getSample)(0, startSample + n) * anWindow[n] *
-                    (myBuffer.*getSample)(0, startSample + m + n) * anWindow[m + n];
-        }
         r[m]/=double(wlen);
     }
 }

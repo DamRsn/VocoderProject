@@ -147,6 +147,8 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
 {
     ignoreUnused(samplesPerBlock);
 
+    double silenceThresholdDb = -40.0;
+
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
@@ -163,15 +165,14 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     int hopVoc = floor(128.0 * ratioSR);
     int wlenVoc = 4*hopVoc;
     std::string window_str = "sine";
-    int orderMaxVoc = 100;
 
     // Pitch Corrector
     int corres_256 = floor(256.0 * ratioSR);
     int hopPitch = 3 * corres_256;
     int frameLenPitch = 4 * corres_256;
 
-    pitchProcess.prepare(sampleRate, 100, 800, frameLenPitch, hopPitch, samplesPerBlock);
-    vocoderProcess.prepare(wlenVoc, hopVoc, 0, 0, window_str);
+    pitchProcess.prepare(sampleRate, 100, 800, frameLenPitch, hopPitch, samplesPerBlock, silenceThresholdDb);
+    vocoderProcess.prepare(wlenVoc, hopVoc, window_str, silenceThresholdDb);
 
     int latency = std::max(pitchProcess.getLatency(samplesPerBlock), vocoderProcess.getLatency(samplesPerBlock));
     int samplesToKeep = frameLenPitch;
@@ -211,11 +212,21 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     auto synthBuffer = getBusBuffer(buffer, true, 1);
 
     myBuffer.fillInputBuffers(voiceBuffer, synthBuffer);
+
     if (treeState.getRawParameterValue("vocBool")->load())
         vocoderProcess.process(myBuffer);
 
     if (treeState.getRawParameterValue("pitchBool")->load())
         pitchProcess.process(myBuffer);
+    
+    auto gainVoice = treeState.getRawParameterValue("gainVoice");
+    auto gainSynth = treeState.getRawParameterValue("gainSynth");
+
+    if (gainVoice->load() > -59.0)
+        myBuffer.addDryVoice(Decibels::decibelsToGain(gainVoice->load(), -59.0f));
+
+    if (gainSynth->load() > -59.0)
+        myBuffer.addSynth(Decibels::decibelsToGain(gainSynth->load(), -59.0f));
 
     myBuffer.fillOutputBuffer(buffer, nOutputChannels);
 
@@ -229,7 +240,7 @@ bool VocoderAudioProcessor::hasEditor() const
 
 AudioProcessorEditor* VocoderAudioProcessor::createEditor()
 {
-    return new foleys::MagicPluginEditor (magicState);
+    return new foleys::MagicPluginEditor (magicState, BinaryData::vocodergui_final, BinaryData::vocodergui_finalSize);
     //return new VocoderAudioProcessorEditor (*this);
 }
 

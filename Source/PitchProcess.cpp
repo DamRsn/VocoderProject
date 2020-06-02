@@ -36,7 +36,8 @@ void PitchProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
 }
 
 
-void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock)
+void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock,
+        double silenceThresholdDb)
 {
     this->fMin = fMin;
     this->fMax = fMax;
@@ -60,6 +61,8 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
     this->yinTol = 0.25;
     this->startSample = 0;
     this->bufferIdxMax = 0;
+    this->silenceThresholdDb = silenceThresholdDb;
+
 
     this->nChunk = 0;
     this->chunkSize = frameLen - hop;
@@ -92,6 +95,7 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
 
     psolaWindow.reserve(2 * tauMax + 3);
     periodSamples.reserve(2 * tauMax + 3);
+    xInterp.reserve(2 * tauMax + 3);
     valley = true;
 
     buildWindows(anWindow, stWindow);
@@ -109,6 +113,8 @@ void PitchProcess::process(MyBuffer &myBuffer)
 {
     if (bufferIdxMax==0)
         bufferIdxMax = myBuffer.getIdxMax();
+
+
 
     while(startSample < myBuffer.getSamplesPerBlock())
     {
@@ -138,13 +144,18 @@ void PitchProcess::process(MyBuffer &myBuffer)
 }
 
 
-
-
 void PitchProcess::processChunkStart(MyBuffer& myBuffer)
 {
 
     this->key = static_cast<Notes::key>(audioProcPtr->treeState.getRawParameterValue("keyPitch")->load());
 
+
+
+    if (Decibels::gainToDecibels(myBuffer.getRMSLevelVoice(startSample, frameLen)) < silenceThresholdDb)
+    {
+        anMarks.clear();
+        return;
+    }
 
     std::fill(eFrame.begin(), eFrame.end(), 0.0);
     std::fill(outEFrame.begin(), outEFrame.end(), 0.0);
@@ -177,9 +188,10 @@ void PitchProcess::processChunkCont(MyBuffer& myBuffer)
         psola(myBuffer);
 
         filterIIR();
+        fillOutputBuffer(myBuffer);
+
     }
 
-    fillOutputBuffer(myBuffer);
 }
 
 

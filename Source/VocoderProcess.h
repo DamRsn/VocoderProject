@@ -26,7 +26,7 @@ public:
     VocoderProcess();
     ~VocoderProcess();
 
-    void prepare(int wlen, int hop, int order, int orderMax, std::string windowType);
+    void prepare(int wlen, int hop, std::string windowType, double silenceThresholdDb);
     int getLatency(int samplesPerBlock);
 
     void process(MyBuffer& myBuffer);
@@ -63,6 +63,9 @@ private:
     double gainVoice;
     double gainVocoder;
     double gainSynth;
+
+    // Silence threshold
+    double silenceThresholdDb;
 
     // Analysis and synthesis windows
     std::vector<double> anWindow;

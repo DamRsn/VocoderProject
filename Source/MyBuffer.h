@@ -40,6 +40,13 @@ public:
     int getNumOutChannels() const {return numChannelsOut;}
     int getInSize() const {return inSize;}
 
+    double getRMSLevelVoice(int startSample, int numSamples);
+    double getRMSLevelSynth(int startSample, int numSamples);
+
+    void addDryVoice(double gain);
+    void addSynth(double gain);
+
+
     void clearOutput(int channel, int numSamples);
 
 

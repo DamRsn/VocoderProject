@@ -37,7 +37,8 @@ public:
     PitchProcess();
     ~PitchProcess();
 
-    void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock);
+    void prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock, double
+    silenceThresholdDb);
     void prepare2 (MyBuffer& myBuffer);
     void setAudioProcPtr(VocoderAudioProcessor* audioProcPtr);
     int getLatency(int samplesPerBlock);
@@ -79,6 +80,8 @@ private:
     double overlap;
     int startSample;
     int bufferIdxMax;
+
+    double silenceThresholdDb;
 
     int samplesPerBlock;
 

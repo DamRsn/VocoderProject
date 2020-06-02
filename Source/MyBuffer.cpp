@@ -159,3 +159,184 @@ void MyBuffer::clearOutput(int channel, int numSamples)
         mOutput.clear(channel, 0, numSamples - outSize + outCounter);
     }
 }
+
+
+double MyBuffer::getRMSLevelVoice(int startSample, int numSamples)
+{
+    int startIdx = (currCounter + startSample + inSize)%inSize;
+    double RMS;
+    if (startIdx + numSamples <= inSize)
+    {
+        RMS = mInputVoice.getRMSLevel(0, startIdx, numSamples);
+    } else
+    {
+        RMS = sqrt(pow(mInputVoice.getRMSLevel(0, startIdx, inSize-startIdx), 2) +
+                pow(mInputVoice.getRMSLevel(0, 0,
+                        numSamples - (inSize - startIdx)), 2));
+    }
+
+    return RMS;
+}
+
+
+double MyBuffer::getRMSLevelSynth(int startSample, int numSamples)
+{
+    int startIdx = (currCounter + startSample + inSize)%inSize;
+    double RMS_0;
+    double RMS_1;
+    if (startIdx + numSamples <= inSize)
+    {
+        RMS_0 = mInputSynth.getRMSLevel(0, startIdx, numSamples);
+        RMS_1 = mInputSynth.getRMSLevel(1, startIdx, numSamples);
+
+    } else
+    {
+        RMS_0 = sqrt(pow(mInputSynth.getRMSLevel(0, startIdx, inSize-startIdx), 2) +
+                   pow(mInputSynth.getRMSLevel(0, 0,
+                                               numSamples - (inSize - startIdx)), 2));
+
+        RMS_1 = sqrt(pow(mInputSynth.getRMSLevel(1, startIdx, inSize-startIdx), 2) +
+                     pow(mInputSynth.getRMSLevel(1, 0,
+                                                 numSamples - (inSize - startIdx)), 2));
+    }
+
+    return (RMS_0+RMS_1)/2.0;
+}
+
+
+void MyBuffer::addDryVoice(double gain)
+{
+    if (currCounter + samplesPerBlock <= inSize)
+    {
+        if (outCounter + samplesPerBlock <= outSize) 
+        {
+            for (int channel = 0; channel < numChannelsOut; channel++)
+                mOutput.addFrom(channel, outCounter, mInputVoice, 0, currCounter, samplesPerBlock, gain);
+        }
+        else
+        {
+            int n = outSize - outCounter;
+            for (int channel = 0; channel < numChannelsOut; channel++) 
+            {
+                mOutput.addFrom(channel, outCounter, mInputVoice, 0, currCounter, n, gain);
+                mOutput.addFrom(channel, 0, mInputVoice, 0, currCounter + n,
+                        samplesPerBlock - n, gain);
+            }
+
+        }
+    } 
+    else {
+        if (outCounter + samplesPerBlock <= outSize) {
+            for (int channel = 0; channel < numChannelsOut; channel++) {
+                int n = inSize - currCounter;
+                mOutput.addFrom(channel, outCounter, mInputVoice, 0, currCounter, n, gain);
+                mOutput.addFrom(channel, outCounter + n, mInputVoice, 0, 0,
+                                samplesPerBlock - n, gain);
+            }
+        } else {
+            int nOut = outSize - outCounter;
+            int nIn =  inSize - currCounter;
+
+            if (nIn == nOut) {
+                for (int channel = 0; channel < numChannelsOut; channel++) {
+                    mOutput.addFrom(channel, outCounter, mInputVoice, 0, currCounter, nIn, gain);
+                    mOutput.addFrom(channel, 0, mInputVoice, 0, 0,
+                            samplesPerBlock - nIn, gain);
+                }
+            }
+
+            if (nIn < nOut) {
+                for (int channel = 0; channel < numChannelsOut; channel++) {
+                    mOutput.addFrom(channel, outCounter, mInputVoice, 0, currCounter, nIn, gain);
+                    mOutput.addFrom(channel, outCounter + nIn, mInputVoice, 0, 
+                            0, nOut - nIn, gain);
+                    mOutput.addFrom(channel, 0, mInputVoice, 0, nOut - nIn,
+                                    samplesPerBlock - nOut, gain);
+
+                }
+            }
+
+            if (nIn > nOut) {
+                for (int channel = 0; channel < numChannelsOut; channel++) {
+                    mOutput.addFrom(channel, outCounter, mInputVoice, 0, currCounter, nOut, gain);
+                    mOutput.addFrom(channel, 0, mInputVoice, 0, currCounter + nOut,
+                                    nIn - nOut, gain);
+                    mOutput.addFrom(channel, nIn - nOut, mInputVoice, 0, 0,
+                                    samplesPerBlock - nIn, gain);
+                }
+            }
+        }
+    } 
+
+}
+
+
+void MyBuffer::addSynth(double gain)
+{
+    if (currCounter + samplesPerBlock <= inSize)
+    {
+        if (outCounter + samplesPerBlock <= outSize)
+        {
+            for (int channel = 0; channel < numChannelsOut; channel++)
+                mOutput.addFrom(channel, outCounter, mInputSynth, channel, currCounter, samplesPerBlock, gain);
+        }
+        else
+        {
+            int n = outSize - outCounter;
+            for (int channel = 0; channel < numChannelsOut; channel++)
+            {
+                mOutput.addFrom(channel, outCounter, mInputSynth, channel, currCounter, n, gain);
+                mOutput.addFrom(channel, 0, mInputSynth, channel, currCounter + n,
+                        samplesPerBlock - n, gain);
+            }
+
+        }
+    }
+    else {
+        if (outCounter + samplesPerBlock <= outSize) {
+            for (int channel = 0; channel < numChannelsOut; channel++)
+            {
+                int n = inSize - currCounter;
+                mOutput.addFrom(channel, outCounter, mInputSynth, channel, currCounter, n, gain);
+                mOutput.addFrom(channel, outCounter + n, mInputSynth, channel, 0,
+                                samplesPerBlock - n, gain);
+            }
+        } else {
+            int nOut = outSize - outCounter;
+            int nIn =  inSize - currCounter;
+
+            if (nIn == nOut) {
+                for (int channel = 0; channel < numChannelsOut; channel++)
+                {
+                    mOutput.addFrom(channel, outCounter, mInputSynth, channel, currCounter, nIn, gain);
+                    mOutput.addFrom(channel, 0, mInputSynth, channel, 0,
+                            samplesPerBlock - nIn, gain);
+                }
+            }
+
+            if (nIn < nOut) {
+                for (int channel = 0; channel < numChannelsOut; channel++)
+                {
+                    mOutput.addFrom(channel, outCounter, mInputSynth, channel, currCounter, nIn, gain);
+                    mOutput.addFrom(channel, outCounter + nIn, mInputSynth, channel,
+                                    0, nOut - nIn, gain);
+                    mOutput.addFrom(channel, 0, mInputSynth, channel, nOut - nIn,
+                                    samplesPerBlock - nOut, gain);
+
+                }
+            }
+
+            if (nIn > nOut) {
+                for (int channel = 0; channel < numChannelsOut; channel++)
+                {
+                    mOutput.addFrom(channel, outCounter, mInputSynth, channel, currCounter, nOut, gain);
+                    mOutput.addFrom(channel, 0, mInputSynth, channel, currCounter + nOut,
+                                    nIn - nOut, gain);
+                    mOutput.addFrom(channel, nIn - nOut, mInputSynth, channel, 0,
+                                    samplesPerBlock - nIn, gain);
+                }
+            }
+        }
+    }
+
+}
