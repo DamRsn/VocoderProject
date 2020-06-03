@@ -45,6 +45,7 @@ public:
     int getSampleToKeep();
 
     void process(MyBuffer& myBuffer);
+    void silence();
 
 private:
 

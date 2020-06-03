@@ -109,6 +109,21 @@ void PitchProcess::prepare2(MyBuffer& myBuffer)
 }
 
 
+void PitchProcess::silence()
+{
+    if (!anMarks.empty())
+        anMarks.clear();
+
+    if (!stMarks.empty())
+        stMarks.clear();
+
+    prevPitch = 0;
+    prevPeriod = 0;
+    pitch = 0;
+    period = 0;
+}
+
+
 void PitchProcess::process(MyBuffer &myBuffer)
 {
     if (bufferIdxMax==0)
@@ -151,9 +166,11 @@ void PitchProcess::processChunkStart(MyBuffer& myBuffer)
 
 
 
-    if (Decibels::gainToDecibels(myBuffer.getRMSLevelVoice(startSample, frameLen)) < silenceThresholdDb)
+    if (Decibels::gainToDecibels(myBuffer.getRMSLevelVoiceFull()) < silenceThresholdDb)
     {
         anMarks.clear();
+        prevPitch = 0;
+
         return;
     }
 
@@ -331,7 +348,7 @@ void PitchProcess::pitchMarks(const MyBuffer& myBuffer)
     nAnMarksOv = 0;
     prevAnMarks -= hop;
 
-    for (int i=0; i<prevAnMarks.size(); i++)
+    for (int i=0; i < prevAnMarks.size(); i++)
     {
         if (prevAnMarks[i] >= 0)
             nAnMarksOv += 1;

@@ -147,7 +147,7 @@ void VocoderAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
 {
     ignoreUnused(samplesPerBlock);
 
-    double silenceThresholdDb = -40.0;
+    double silenceThresholdDb = -60.0;
 
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -216,8 +216,11 @@ void VocoderAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
     if (treeState.getRawParameterValue("vocBool")->load())
         vocoderProcess.process(myBuffer);
 
+
     if (treeState.getRawParameterValue("pitchBool")->load())
         pitchProcess.process(myBuffer);
+    else
+        pitchProcess.silence();
     
     auto gainVoice = treeState.getRawParameterValue("gainVoice");
     auto gainSynth = treeState.getRawParameterValue("gainSynth");

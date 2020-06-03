@@ -12,7 +12,8 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include <iostream>
-#include <assert.h>
+#include <cmath>
+#include <cassert>
 
 
 class MyBuffer
@@ -42,6 +43,9 @@ public:
 
     double getRMSLevelVoice(int startSample, int numSamples);
     double getRMSLevelSynth(int startSample, int numSamples);
+
+    double getRMSLevelVoiceFull();
+    double getRMSLevelSynthFull();
 
     void addDryVoice(double gain);
     void addSynth(double gain);

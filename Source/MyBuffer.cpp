@@ -78,10 +78,13 @@ void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const Aud
 void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer, int nOutputChannels)
 {
     buffer.clear();
+
     for(int channel = 0; channel < nOutputChannels; channel++) {
         auto* channelData = buffer.getWritePointer(channel, 0);
         for (int sample = 0; sample < samplesPerBlock; sample++)
+        {
             channelData[sample] = getOutSample(channel, sample);
+        }
         
         // Clear stuffs that have just been written to buffer
         clearOutput(channel, samplesPerBlock);
@@ -131,7 +134,8 @@ void MyBuffer::addOutSample(int channel, int idx, double value)
         assert(false);
     }
     */
-    mOutput.addSample(channel, (outCounter + idx)%outSize, value);
+
+     mOutput.addSample(channel, (outCounter + idx)%outSize, value);
 }
 
 
@@ -179,6 +183,12 @@ double MyBuffer::getRMSLevelVoice(int startSample, int numSamples)
 }
 
 
+double MyBuffer::getRMSLevelVoiceFull()
+{
+    return mInputVoice.getRMSLevel(0, 0, inSize);
+}
+
+
 double MyBuffer::getRMSLevelSynth(int startSample, int numSamples)
 {
     int startIdx = (currCounter + startSample + inSize)%inSize;
@@ -201,6 +211,12 @@ double MyBuffer::getRMSLevelSynth(int startSample, int numSamples)
     }
 
     return (RMS_0+RMS_1)/2.0;
+}
+
+
+double MyBuffer::getRMSLevelSynthFull()
+{
+    return mInputSynth.getRMSLevel(0, 0, inSize);
 }
 
 

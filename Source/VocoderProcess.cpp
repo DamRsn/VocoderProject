@@ -1,4 +1,4 @@
-/*
+    /*
   ==============================================================================
 
     VocoderProcess.cpp
@@ -166,8 +166,12 @@ void VocoderProcess::processWindow(MyBuffer &myBuffer)
     setOrderSynth();
     setOrderVoice();
 
-    double RMSVoiceDb = Decibels::gainToDecibels(myBuffer.getRMSLevelVoice(startSample, wlen));
-    double RMSSynthDb = Decibels::gainToDecibels(myBuffer.getRMSLevelSynth(startSample, wlen));
+    //double RMSVoiceDb = Decibels::gainToDecibels(myBuffer.getRMSLevelVoice(startSample, wlen));
+    //double RMSSynthDb = Decibels::gainToDecibels(myBuffer.getRMSLevelSynth(startSample, wlen));
+
+    double RMSVoiceDb = Decibels::gainToDecibels(myBuffer.getRMSLevelVoiceFull());
+    double RMSSynthDb = Decibels::gainToDecibels(myBuffer.getRMSLevelSynthFull());
+
 
     if (RMSVoiceDb < silenceThresholdDb or RMSSynthDb < silenceThresholdDb)
         return;
@@ -246,11 +250,10 @@ void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
 
     // Add samples to output buffer
     for (int channel = 0; channel < myBuffer.getNumOutChannels(); channel++){
-        for (int i = 0; i < wlen; i++) {
+        for (int i = 0; i < wlen; i++)
             myBuffer.addOutSample(channel, startSample + i,
-                                  (Decibels::decibelsToGain(gainVoc->load(), -59.0f) * out[i])
-                                  * stWindow[i]);
-        }
+                    Decibels::decibelsToGain(gainVoc->load(), -59.0f) * out[i] * stWindow[i]);
+
     }
 }
 
