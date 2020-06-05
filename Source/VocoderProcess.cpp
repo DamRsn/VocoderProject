@@ -69,14 +69,10 @@ VocoderProcess::~VocoderProcess() {}
 
 int VocoderProcess::getLatency(int samplesPerBlock)
 {
-    // TODO: Do something ?
+    // TODO: can do better?
     int latency;
-    if(samplesPerBlock <= hop)
-        latency = wlen - samplesPerBlock;
-    else
-        latency = wlen;
 
-    // Bypass everything: set latency to wlen so we are shure no pb since samples per block > 0
+    // Bypass everything: set latency to wlen so we are sure no pb since samples per block > 0
     latency = wlen;
     return latency;
 }

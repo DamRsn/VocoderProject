@@ -17,14 +17,20 @@ PitchProcess::~PitchProcess() {}
 
 
 int PitchProcess::getLatency(int samplesPerBlock) {
-    //TODO: something smart that minimizes latency
+
     int latency;
-    if (samplesPerBlock <= frameLen)
+    // todo: it wasn't working
+    /*
+    if (samplesPerBlock < frameLen) {
+        if (frameLen % samplesPerBlock == 0)
+            latency = frameLen - samplesPerBlock;
+        else
+            latency = frameLen;
+    } else{
         latency = frameLen;
-
-    else
-        latency = frameLen;
-
+    }
+    */
+    latency = frameLen;
     return latency;
 
 }
