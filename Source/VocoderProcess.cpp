@@ -25,6 +25,13 @@ void VocoderProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
     this->audioProcPtr = audioProcPtr;
 }
 
+/**
+ * Function to call in prepare to play to allocate memory and instantiate variables for the vocoder
+ * @param wlen
+ * @param hop
+ * @param windowType
+ * @param silenceThresholdDb
+ */
 void VocoderProcess::prepare(int wlen, int hop, std::string windowType, double silenceThresholdDb)
 {
     this->wlen = wlen;
@@ -57,7 +64,6 @@ void VocoderProcess::prepare(int wlen, int hop, std::string windowType, double s
     EeSynth = 1.0;
     EeVoice = 0.0;
 
-
     EeVoiceArr.resize(10, 0.0);
     EeSynthArr.resize(10, 0.0);
 
@@ -66,7 +72,11 @@ void VocoderProcess::prepare(int wlen, int hop, std::string windowType, double s
 
 VocoderProcess::~VocoderProcess() {}
 
-
+/**
+ * return latency needed for the vocoder to work
+ * @param samplesPerBlock : buffer size
+ * @return
+ */
 int VocoderProcess::getLatency(int samplesPerBlock)
 {
     // TODO: can do better?
@@ -77,6 +87,11 @@ int VocoderProcess::getLatency(int samplesPerBlock)
     return latency;
 }
 
+
+/**
+ * Resize and fill anWindow and stWindow
+ * @param windowType : "hann" or "sine"
+ */
 void VocoderProcess::setWindows(std::string windowType)
 {
     // Build window vector for analysis and synthesis
@@ -120,6 +135,9 @@ void VocoderProcess::setWindows(std::string windowType)
 }
 
 
+/**
+ * Change the LPC order for voice. Reads the value from value tree state
+ */
 void VocoderProcess::setOrderVoice()
 {
     auto orderVoicePtr = audioProcPtr->treeState.getRawParameterValue("lpcVoice");
@@ -132,6 +150,9 @@ void VocoderProcess::setOrderVoice()
 }
 
 
+/**
+ * Change the LPC order for synth. Reads the value from value tree state
+ */
 void VocoderProcess::setOrderSynth()
 {
     auto orderSynthPtr = audioProcPtr->treeState.getRawParameterValue("lpcSynth");
@@ -143,6 +164,12 @@ void VocoderProcess::setOrderSynth()
     }
 }
 
+
+/**
+ * Function called in processBlock. Launch different functions at appropriate moments. Update the class counter
+ * startSample
+ * @param myBuffer
+ */
 void VocoderProcess::process(MyBuffer &myBuffer)
 {
     // Call process window
@@ -156,6 +183,10 @@ void VocoderProcess::process(MyBuffer &myBuffer)
 }
 
 
+/**
+ * Process a window (frame). Function called by process
+ * @param myBuffer
+ */
 void VocoderProcess::processWindow(MyBuffer &myBuffer)
 {
     // Update order of LPC
@@ -173,11 +204,11 @@ void VocoderProcess::processWindow(MyBuffer &myBuffer)
         return;
 
     // LPC on Voice
-    lpc(myBuffer, &MyBuffer::getVoiceSample, rVoice, aVoice, aPrevVoice, orderVoice,
+    lpc(myBuffer, myBuffer.getVoiceReadPtr(), rVoice, aVoice, aPrevVoice, orderVoice,
             wlen, startSample, anWindow);
 
     // LPC on Synth
-    lpc(myBuffer, &MyBuffer::getSynthSample, rSynth, aSynth, aPrevSynth, orderSynth,
+    lpc(myBuffer, myBuffer.getSynthReadPtr(0), rSynth, aSynth, aPrevSynth, orderSynth,
             wlen, startSample, anWindow);
 
     // Get excitation signal on voice, with energy
@@ -192,6 +223,15 @@ void VocoderProcess::processWindow(MyBuffer &myBuffer)
 }
 
 
+/**
+ * Compute the residual for voice or synth
+ * @param myBuffer
+ * @param getSample : pointer to function getVoiceSample or getSynthSample
+ * @param e : residual vector
+ * @param a : LPC filter coeff
+ * @param order : LPC order
+ * @param E : energy of residual
+ */
 void VocoderProcess::filterFIR(MyBuffer& myBuffer, double (MyBuffer::*getSample)(int, int) const,
         std::vector<double>& e, const std::vector<double>& a, const int order, double& E)
 {
@@ -211,12 +251,15 @@ void VocoderProcess::filterFIR(MyBuffer& myBuffer, double (MyBuffer::*getSample)
 }
 
 
+/**
+ * IIR filter and add output samples to ouput buffer of myBuffer
+ * @param myBuffer
+ * @param a : LPC filter coeff of voice
+ * @param order : order of voice LPC filter
+ */
 void VocoderProcess::filterIIR(MyBuffer& myBuffer, const std::vector<double>& a,
         const int order)
 {
-    // a is a vector of Voice LPC coefficients
-    // order is the order of LPC filter
-
     // Array of energy of previous windows, use mean to have smooth gain changes
     shift(EeVoiceArr);
     shift(EeSynthArr);

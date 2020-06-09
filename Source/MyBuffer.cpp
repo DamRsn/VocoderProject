@@ -10,10 +10,27 @@
 
 #include "MyBuffer.h"
 
+/**
+ * Class with circular buffer of double precision numbers for voice (mono), synthesizer (stereo) and output(stereo)
+ * signals
+ */
+
 MyBuffer::MyBuffer() {}
 
 MyBuffer::~MyBuffer(){}
 
+
+/**
+ * Function to call in prepare to play to allocate the memory of the different buffers and initialised the
+ * different variables
+ * @param samplesPerBlock : buffer size
+ * @param samplesToKeep : number of past samples to keep (to be accessed with negative number in getSample methods)
+ * @param latency : number of samples of latency
+ * @param sampleRate : in Hz
+ * @param numChannelsInVoice : number of channels for voice (1)
+ * @param numChannelsInSynth : number of channels for synthesizer (2)
+ * @param numChannelsOut : number of channel for output buffer (2)
+ */
 void MyBuffer::prepare(int samplesPerBlock, int samplesToKeep, int latency, double sampleRate, int
 numChannelsInVoice, int numChannelsInSynth, int numChannelsOut)
 {
@@ -25,8 +42,9 @@ numChannelsInVoice, int numChannelsInSynth, int numChannelsOut)
     this->numChannelsInSynth = numChannelsInSynth;
     this->numChannelsOut = numChannelsOut;
 
-
+    // Size of voice and synthesizer buffers (in number of samples)
     inSize = samplesToKeep + samplesPerBlock + latency;
+    // Size of output buffer in number of samples
     outSize = samplesPerBlock + latency;
 
     mInputVoice.setSize(numChannelsInVoice, inSize);
@@ -47,34 +65,51 @@ numChannelsInVoice, int numChannelsInSynth, int numChannelsOut)
 }
 
 
+/**
+ * Replace last samplesPerBlock samples by samplesPerBlock samples from current buffer to mInputVoice and mInputSynth
+ * cast all the sampels from float to double precision
+ * @param voiceBuffer : buffer with voice signal (of size samplesPerBlock)
+ * @param synthBuffer : buffer with synth signal (of size samplesPerBlock)
+ */
 void MyBuffer::fillInputBuffers(const AudioBuffer<float> &voiceBuffer, const AudioBuffer<float> &synthBuffer)
 {
+    // For voice buffer
     int numSamples = voiceBuffer.getNumSamples();
     for(int channel = 0; channel < numChannelsInVoice; channel++) {
         auto *voiceReadPtr = voiceBuffer.getReadPointer(channel);
         auto *inVoiceWrtPtr = mInputVoice.getWritePointer(channel, 0);
 
+        #pragma clang loop vectorize(enable)
         for (int i = 0; i < numSamples; i++)
             inVoiceWrtPtr[(inCounter + i) % inSize] = voiceReadPtr[i];
 
     }
 
+    // For synth buffer
     for(int channel = 0; channel < numChannelsInSynth; channel++) {
         auto* synthReadPtr = synthBuffer.getReadPointer(channel);
         auto* inSynthWrtPtr = mInputSynth.getWritePointer(channel, 0);
 
         if (synthReadPtr!=NULL) {
+            #pragma clang loop vectorize(enable)
             for (int i = 0; i < numSamples; i++)
                 inSynthWrtPtr[(inCounter + i) % inSize] = synthReadPtr[i];
         }
-        else
+        else {
+            #pragma clang loop vectorize(enable)
             for (int i = 0; i < numSamples; i++)
                 inSynthWrtPtr[(inCounter + i) % inSize] = 0.0;
+        }
 
     }
 }
 
 
+/**
+ * Fill the float buffer with content mOutputBuffer. Then updates the counters
+ * @param buffer : buffer to copy data to
+ * @param nOutputChannels : number of output channels of buffer
+ */
 void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer, int nOutputChannels)
 {
     buffer.clear();
@@ -98,6 +133,12 @@ void MyBuffer::fillOutputBuffer(AudioBuffer<float> &buffer, int nOutputChannels)
 }
 
 
+/**
+ * Returns voice sample (double) for given channel and idx
+ * @param channel
+ * @param idx
+ * @return requested samples (double)
+ */
 double MyBuffer::getVoiceSample(int channel, int idx) const
 {
     /*
@@ -108,11 +149,16 @@ double MyBuffer::getVoiceSample(int channel, int idx) const
     }
      */
 
-    // return mInputVoice.getSample(channel, (currCounter + idx + inSize)%inSize);
-    return voiceReadPtr[(currCounter + idx + inSize)%inSize];
+    return mInputVoice.getSample(channel, (currCounter + idx + inSize)%inSize);
 }
 
 
+/**
+ * Returns synth sample (double) for given channel and index
+ * @param channel
+ * @param idx
+ * @return requested samples (double)
+ */
 double MyBuffer::getSynthSample(int channel, int idx) const
 {
     /*
@@ -126,6 +172,12 @@ double MyBuffer::getSynthSample(int channel, int idx) const
 }
 
 
+/**
+ * add a value to the output buffer at given channel and index
+ * @param channel
+ * @param idx
+ * @param value
+ */
 void MyBuffer::addOutSample(int channel, int idx, double value)
 {
      /*
@@ -139,6 +191,12 @@ void MyBuffer::addOutSample(int channel, int idx, double value)
 }
 
 
+/**
+ * returns output sample for a given channel and index
+ * @param channel
+ * @param idx
+ * @return
+ */
 double MyBuffer::getOutSample(int channel, int idx) const
 {
     /*
@@ -152,6 +210,11 @@ double MyBuffer::getOutSample(int channel, int idx) const
 }
 
 
+/**
+ * Clears numSamples of the given channel of output buffer starting at outCounter
+ * @param channel
+ * @param numSamples
+ */
 void MyBuffer::clearOutput(int channel, int numSamples)
 {
     if (outCounter + numSamples < outSize)
@@ -164,7 +227,13 @@ void MyBuffer::clearOutput(int channel, int numSamples)
     }
 }
 
-
+/**
+ * Return RMS value of a range of the voice buffer
+ * the range start at startSample and is numSamples long
+ * @param startSample
+ * @param numSamples
+ * @return
+ */
 double MyBuffer::getRMSLevelVoice(int startSample, int numSamples)
 {
     int startIdx = (currCounter + startSample + inSize)%inSize;
@@ -182,13 +251,22 @@ double MyBuffer::getRMSLevelVoice(int startSample, int numSamples)
     return RMS;
 }
 
-
+/**
+ * Get RMS level of full voice buffer
+ * @return RMS level (double)
+ */
 double MyBuffer::getRMSLevelVoiceFull()
 {
     return mInputVoice.getRMSLevel(0, 0, inSize);
 }
 
-
+/**
+ * Return RMS value of a range of the synthesiser buffer
+ * the range start at startSample and is numSamples long
+ * @param startSample
+ * @param numSamples
+ * @return
+ */
 double MyBuffer::getRMSLevelSynth(int startSample, int numSamples)
 {
     int startIdx = (currCounter + startSample + inSize)%inSize;
@@ -210,16 +288,24 @@ double MyBuffer::getRMSLevelSynth(int startSample, int numSamples)
                                                  numSamples - (inSize - startIdx)), 2));
     }
 
+    // Return mean of RMS value of both channels
     return (RMS_0+RMS_1)/2.0;
 }
 
-
+/**
+ * Get RMS level of full synth buffer
+ * @return RMS level (double)
+ */
 double MyBuffer::getRMSLevelSynthFull()
 {
     return mInputSynth.getRMSLevel(0, 0, inSize);
 }
 
 
+/**
+ * Add dry voice signal with given gain (not in db) to output buffer
+ * @param gain: value larger than 0
+ */
 void MyBuffer::addDryVoice(double gain)
 {
     if (currCounter + samplesPerBlock <= inSize)
@@ -287,6 +373,10 @@ void MyBuffer::addDryVoice(double gain)
 }
 
 
+/**
+ * Add synth signal with given gain (not in db) to output buffer
+ * @param gain: value larger than 0
+ */
 void MyBuffer::addSynth(double gain)
 {
     if (currCounter + samplesPerBlock <= inSize)

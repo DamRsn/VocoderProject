@@ -40,6 +40,10 @@ public:
     int getSamplesToKeep() const {return samplesToKeep;}
     int getNumOutChannels() const {return numChannelsOut;}
     int getInSize() const {return inSize;}
+    int getCurrCounter() const {return currCounter;}
+
+    const double* getVoiceReadPtr() const{return mInputVoice.getReadPointer(0);}
+    const double* getSynthReadPtr(int channel) const{return mInputSynth.getReadPointer(channel);}
 
     double getRMSLevelVoice(int startSample, int numSamples);
     double getRMSLevelSynth(int startSample, int numSamples);
@@ -50,10 +54,7 @@ public:
     void addDryVoice(double gain);
     void addSynth(double gain);
 
-
     void clearOutput(int channel, int numSamples);
-
-
 
 private:
     int samplesPerBlock;
@@ -77,7 +78,7 @@ private:
     // Curr idx corresponding to first sample idx of what will be sent to output at this iteration
     int currCounter;
 
-
+    // Audio Buffer, implemented circularly in this class
     AudioBuffer<double> mInputVoice;
     AudioBuffer<double> mInputSynth;
     AudioBuffer<double> mOutput;

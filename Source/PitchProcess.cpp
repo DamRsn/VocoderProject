@@ -15,7 +15,11 @@
 PitchProcess::PitchProcess() {}
 PitchProcess::~PitchProcess() {}
 
-
+/**
+ * Compute latency needed for buffer constructino
+ * @param samplesPerBlock : buffer size
+ * @return
+ */
 int PitchProcess::getLatency(int samplesPerBlock) {
 
     int latency;
@@ -35,13 +39,26 @@ int PitchProcess::getLatency(int samplesPerBlock) {
 
 }
 
-
+/**
+ * Set audioProcPtr value with pointer to VocoderAudioProcess
+ * @param audioProcPtr : Pointer to VocoderAudioProcess
+ */
 void PitchProcess::setAudioProcPtr(VocoderAudioProcessor* audioProcPtr)
 {
     this->audioProcPtr = audioProcPtr;
 }
 
 
+/**
+ * Function to call in prepareToPlay for setting up the pitch corrector
+ * @param fS : sampling frequency in Hz
+ * @param fMin : minimal frequency to detect in Hz
+ * @param fMax : maximal frequency to detect in Hz
+ * @param frameLen : length of a frame in number of samples
+ * @param hop : hop size (number of sampels between the start of a window and the next one)
+ * @param samplesPerBlock : buffer size
+ * @param silenceThresholdDb : silence threshold for noise gate in decibels
+ */
 void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, int hop, int samplesPerBlock,
         double silenceThresholdDb)
 {
@@ -102,19 +119,30 @@ void PitchProcess::prepare(double fS, double fMin, double fMax, int frameLen, in
     psolaWindow.reserve(2 * tauMax + 3);
     periodSamples.reserve(2 * tauMax + 3);
     xInterp.reserve(2 * tauMax + 3);
+
+    // Use valey for pitch marks
     valley = true;
 
+    // Build analysis and synthesis windows
     buildWindows(anWindow, stWindow);
 }
 
-
+/**
+ * Function to call in prepareToPlay after the myBuffer preparation to get additional info
+ * @param myBuffer : reference to myBuffer object
+ */
 void PitchProcess::prepare2(MyBuffer& myBuffer)
 {
     eFrame.resize(myBuffer.getInSize() + (chunksPerFrame - 1) * chunkSize, 0.0);
     samplesToKeep = myBuffer.getSamplesToKeep();
+    bufferIdxMax = myBuffer.getIdxMax();
+
+
 }
 
-
+/**
+ * Function to call when noise gate closed (no sound detected)
+ */
 void PitchProcess::silence()
 {
     if (!anMarks.empty())
@@ -130,13 +158,14 @@ void PitchProcess::silence()
 }
 
 
+/**
+ * Function to call in the process block. Launch the different functions at the appropriate moment
+ * Updates the different counter of this class
+ * @param myBuffer
+ */
 void PitchProcess::process(MyBuffer &myBuffer)
 {
-    if (bufferIdxMax==0)
-        bufferIdxMax = myBuffer.getIdxMax();
-
-
-
+    // If startSample is lower than samplesPerBlock, then some processing has to be done
     while(startSample < myBuffer.getSamplesPerBlock())
     {
         if (nChunk%chunksPerFrame == chunksPerFrame - 1)
@@ -161,16 +190,20 @@ void PitchProcess::process(MyBuffer &myBuffer)
 
         startSample += chunkSize;
     }
+
+    // Update the startSample
     startSample -= myBuffer.getSamplesPerBlock();
 }
 
 
+/**
+ * Called by process function to get pitch info and pitch marks of a frame and process the first chunk of thsi frame
+ * @param myBuffer
+ */
 void PitchProcess::processChunkStart(MyBuffer& myBuffer)
 {
 
     this->key = static_cast<Notes::key>(audioProcPtr->treeState.getRawParameterValue("keyPitch")->load());
-
-
 
     if (Decibels::gainToDecibels(myBuffer.getRMSLevelVoiceFull()) < silenceThresholdDb)
     {
@@ -184,40 +217,66 @@ void PitchProcess::processChunkStart(MyBuffer& myBuffer)
     std::fill(outEFrame.begin(), outEFrame.end(), 0.0);
     std::fill(yFrame.begin(), yFrame.end(), 0.0);
 
+    // Compute the pitch and pitch period
     yin(myBuffer);
+
+    // Find the analysis pitch marks
     pitchMarks(myBuffer);
+
+    // Place the synthesis pitch marks
     placeStMarks();
 
+    // No processing if no analysis pitch marks
     if (!anMarks.empty())
     {
-        lpc(myBuffer, &MyBuffer::getVoiceSample, r, a, aPrev, order, frameLen, startSample, anWindow);
+        // Compute LPC
+        lpc(myBuffer, myBuffer.getVoiceReadPtr(), r, a, aPrev, order, frameLen, startSample, anWindow);
+        // Get residual
         filterFIR(myBuffer, -samplesToKeep, samplesToKeep + frameLen,0);
+
+        // PSOLA on the residual for synthesis pitch marks having samples in the current chunk
         stMarkIdx = 0;
         psola(myBuffer);
 
+        // Get back normal signal from modified residual
         filterIIR();
     }
 
+    // fill the OuputBuffer of myBuffer with current chunk
     fillOutputBuffer(myBuffer);
 }
 
-
+/**
+ * Process chunks that are not the first of the frame
+ * @param myBuffer
+ */
 void PitchProcess::processChunkCont(MyBuffer& myBuffer)
 {
     if (!anMarks.empty())
     {
+        // Get residual of new samples
         filterFIR(myBuffer, frameLen - chunkSize, chunkSize,
                 samplesToKeep + frameLen + (nChunk - 1) * chunkSize);
+
+        // PSOLA on the residual for synthesis pitch marks having samples in the current chunk
         psola(myBuffer);
 
+        // Get back normal signal from modified residual
         filterIIR();
+
+        // fill output buffer with current chunk
         fillOutputBuffer(myBuffer);
 
     }
-
 }
 
-
+/**
+ * Filter voice signal of myBuffer with filter A(z) and write it to eFrame.
+ * @param myBuffer
+ * @param startIdxBuf : starting idx for myBuffer (reading)
+ * @param samplesToFilter : number of samples to filter
+ * @param startIdxE : starting idx for eFrame (writing)
+ */
 void PitchProcess::filterFIR(MyBuffer& myBuffer, int startIdxBuf, int samplesToFilter, int startIdxE)
 {
     int minBufIdx = - myBuffer.getSamplesToKeep();
@@ -242,7 +301,9 @@ void PitchProcess::filterFIR(MyBuffer& myBuffer, int startIdxBuf, int samplesToF
     }
 }
 
-
+/**
+ * IIR Filter chunkSize of outEFrame to yFrame
+ */
 void PitchProcess::filterIIR()
 {
     int shift = nChunk * chunkSize;
@@ -260,7 +321,10 @@ void PitchProcess::filterIIR()
     }
 }
 
-
+/**
+ * Write chunkSize samples from yFrame to output buffer of myBuffer
+ * @param myBuffer
+ */
 void PitchProcess::fillOutputBuffer(MyBuffer& myBuffer)
 {
     auto gainPtr = audioProcPtr->treeState.getRawParameterValue("gainPitch");
@@ -278,19 +342,54 @@ void PitchProcess::fillOutputBuffer(MyBuffer& myBuffer)
 }
 
 
+/**
+ * Compute difference function needed in yin algorithm
+ * @param myBuffer : to read voice buffer
+ * @param yinTemp : to write difference function
+ */
 void PitchProcess::computeYinTemp(const MyBuffer& myBuffer, std::vector<double>& yinTemp)
 {
     double value_i;
     std::fill(yinTemp.begin(), yinTemp.end(), 0.0);
 
+    int currCounter = myBuffer.getCurrCounter();
+    int inSize = myBuffer.getInSize();
+    const double* voiceReadPtr = myBuffer.getVoiceReadPtr();
+
+    int startIdx;
+    int stopIdx;
+
     for (int i = 0; i < frameLen; i++)
     {
         value_i = myBuffer.getVoiceSample(0, startSample + i - tauMax);
-        for (int k = 0; k < tauMax; k++)
+
+        startIdx = (currCounter + startSample + i - tauMax + inSize)%inSize;
+        stopIdx = (currCounter + startSample + i - 1 + inSize)%inSize;
+
+        if (startIdx < stopIdx)
         {
-            yinTemp[k] += pow(value_i - myBuffer.getVoiceSample(0, startSample + i + k - tauMax),
-                    2);
+            #pragma clang loop vectorize(enable)
+            for (int k = 0; k < tauMax; k++)
+               yinTemp[k] += pow(value_i - voiceReadPtr[startIdx + k], 2);
         }
+        else
+        {
+            int n = inSize - startIdx;
+            #pragma clang loop vectorize(enable)
+            for(int k = 0; k < n; k++)
+                yinTemp[k] += pow(value_i - voiceReadPtr[startIdx + k], 2);
+
+            #pragma clang loop vectorize(enable)
+            for (int k = n; k < tauMax; k++)
+                yinTemp[k] += pow(value_i - voiceReadPtr[k - n], 2);
+
+        }
+
+        /*
+        for (int k = 0; k < tauMax; k++) {
+            yinTemp[k] += pow(value_i - myBuffer.getVoiceSample(0, startSample + i + k - tauMax), 2);
+        }
+         */
     }
 
     yinTemp[0] = 1.0;
@@ -304,6 +403,11 @@ void PitchProcess::computeYinTemp(const MyBuffer& myBuffer, std::vector<double>&
 }
 
 
+/**
+ * Compute the pitch and period with yin algorithm
+ * If unvoiced: pitch and period are set to 0
+ * @param myBuffer
+ */
 void PitchProcess::yin(const MyBuffer& myBuffer)
 {
     // Update tau (lag value corresponding to pitch period in number of sample), if no pitch found, tau = tauMax
@@ -344,6 +448,10 @@ void PitchProcess::yin(const MyBuffer& myBuffer)
 }
 
 
+/**
+ * Place analysis pitch marks using the pitch period and previous analysis pitch marks
+ * @param myBuffer
+ */
 void PitchProcess::pitchMarks(const MyBuffer& myBuffer)
 {
     // Copy content of anMarks to prevAnMarks and clear anMarks, there should be no memory allocation
@@ -458,7 +566,10 @@ void PitchProcess::pitchMarks(const MyBuffer& myBuffer)
     }
 }
 
-
+/**
+ * Place synthesis pitch mark using the shift factor beta and the new period periodNew and the previous synthesis
+ * pitch marks
+ */
 void PitchProcess::placeStMarks()
 {
     prevStMarks = stMarks;
@@ -547,6 +658,10 @@ void PitchProcess::placeStMarks()
 }
 
 
+/**
+ * Psola algorithm on the residual signal
+ * @param myBuffer
+ */
 void PitchProcess::psola(MyBuffer& myBuffer)
 {
     int periodPsola;
@@ -588,7 +703,7 @@ void PitchProcess::psola(MyBuffer& myBuffer)
             startIdx = std::max(int(floor(xInterp[0])), 0);
             stopIdx = std::min(int(ceil(xInterp.back())), frameLen);
 
-            interp(xInterp, periodSamples, outEFrame, psolaWindow, startIdx, stopIdx);
+            interp(xInterp, periodSamples, outEFrame, startIdx, stopIdx);
         }else if (stMarkIdx == 0){
             for (int j = 0; j < 2 * periodPsola + 1; j++) {
                 if (j < periodPsola)
@@ -602,7 +717,7 @@ void PitchProcess::psola(MyBuffer& myBuffer)
             startIdx = std::max(int(floor(xInterp[0])), 0);
             stopIdx =  std::min(int(ceil(xInterp.back())), frameLen);
 
-            interp(xInterp, periodSamples, outEFrame, psolaWindow, startIdx, stopIdx);
+            interp(xInterp, periodSamples, outEFrame, startIdx, stopIdx);
         }else{
             for (int j = 0; j < 2 * periodPsola + 1; j++) {
                 if (j < periodPsola) {
@@ -618,7 +733,7 @@ void PitchProcess::psola(MyBuffer& myBuffer)
             startIdx = std::max(int(floor(xInterp[0])), 0);
             stopIdx = std::min(int(ceil(xInterp.back())), frameLen);
 
-            interp(xInterp, periodSamples, outEFrame, psolaWindow, startIdx, stopIdx);
+            interp(xInterp, periodSamples, outEFrame, startIdx, stopIdx);
         }
 
         stMarkIdx += 1;
@@ -626,6 +741,14 @@ void PitchProcess::psola(MyBuffer& myBuffer)
 }
 
 
+/**
+ * Argmin or argMax in voice buffer of myBuffer between two indices
+ * @param myBuffer
+ * @param idxStart
+ * @param idxEnd
+ * @param min
+ * @return
+ */
 int PitchProcess::argExt(const MyBuffer& myBuffer, int idxStart, int idxEnd, bool min)
 {
     double ext = myBuffer.getVoiceSample(0, startSample + idxStart);
@@ -653,6 +776,15 @@ int PitchProcess::argExt(const MyBuffer& myBuffer, int idxStart, int idxEnd, boo
 }
 
 
+/**
+ * Find closest analysis mark given stMark. Checking that all the samples of the segment to extract are available in
+ * myBuffer
+ * @param anMarks : analysis mark array
+ * @param prevAnMarks : previous analysis marks
+ * @param stMark : index of synthesis pitch mark
+ * @param periodPsola : period to check segment
+ * @return
+ */
 int PitchProcess::getClosestAnMarkIdx(const std::vector<int>& anMarks, const std::vector<int>& prevAnMarks,
         const int& stMark, int periodPsola)
 {
@@ -699,8 +831,16 @@ int PitchProcess::getClosestAnMarkIdx(const std::vector<int>& anMarks, const std
 }
 
 
+/**
+ * Linear interpolation to get values on indices
+ * @param x : x values of the function to interpolate
+ * @param y : y values of the function to interpolate
+ * @param outEFrame : vector to write output to
+ * @param startIdx : startIdx for interpolation
+ * @param stopIdx : stopIdx for interpolation (not taken)
+ */
 void PitchProcess::interp(std::vector<double> &x, const std::vector<double> &y, std::vector<double>& outEFrame,
-        const std::vector<double>& psolaWindow, const int& startIdx, const int &stopIdx)
+        const int& startIdx, const int &stopIdx)
 {
     auto startSearchIt = x.begin();
     std::vector<double>::iterator lb;
@@ -709,7 +849,7 @@ void PitchProcess::interp(std::vector<double> &x, const std::vector<double> &y, 
 
     for (int i = startIdx; i < stopIdx; i++){
         if (i >= x.front() && i <= x.back()){
-            // Find interval in log(n)
+            // Find interval in log(n) time
             lb = std::lower_bound(startSearchIt, x.end(), i);
 
             // update startsearch iterator (because we know that everything is ordered)
@@ -730,13 +870,22 @@ void PitchProcess::interp(std::vector<double> &x, const std::vector<double> &y, 
 }
 
 
+/**
+ * Resize psolaWindow to 2*T+1 and fill it with Hann window
+ * @param psolaWindow
+ * @param T
+ */
 void PitchProcess::fillPsolaWindow(std::vector<double>& psolaWindow, const int& T) {
     psolaWindow.resize(2*T+1);
     dsp::WindowingFunction<double>::fillWindowingTables(&psolaWindow[0], 2*T+1,
                                                         dsp::WindowingFunction<double>::hann,false);
 }
 
-
+/**
+ * Build analysis (ones) and synthesis window (half-Hann, ones, half-Hann)
+ * @param anWindow
+ * @param stWindow
+ */
 void PitchProcess::buildWindows(std::vector<double>& anWindow, std::vector<double>& stWindow)
 {
     anWindow.resize(frameLen, 1.0);
@@ -791,14 +940,3 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
     os << "]\n";
     return os;
 }
-
-
-
-
-
-
-
-
-
-
-

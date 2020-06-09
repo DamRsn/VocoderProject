@@ -70,7 +70,7 @@ private:
 
     // Interpolate
     void interp(std::vector<double>& x, const std::vector<double>& y, std::vector<double>& outWindow,
-            const std::vector<double>& psolaWindow, const int& startIdx, const int& stopIdx);
+            const int& startIdx, const int& stopIdx);
 
     void filterFIR(MyBuffer& myBuffer, int startIdxBuf, int samplesToFilter, int startIdxE);
     void filterIIR();

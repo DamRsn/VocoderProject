@@ -9,7 +9,6 @@
 */
 
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
 
 //==============================================================================
 VocoderAudioProcessor::VocoderAudioProcessor()
@@ -32,12 +31,11 @@ treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
     pitchProcess.setAudioProcPtr(this);
 }
 
+/**
+* Create all the parameters for the value tree state
+*/
 AudioProcessorValueTreeState::ParameterLayout VocoderAudioProcessor::createParameterLayout()
 {
-    /*
-     * Create all the parameters for the value tree state
-     */
-
     std::vector <std::unique_ptr<RangedAudioParameter>> params;
 
     auto gainPitchParam = std::make_unique<AudioParameterFloat>("gainPitch", "GainPitch", -60.0f, 6.0f, 0.0f);

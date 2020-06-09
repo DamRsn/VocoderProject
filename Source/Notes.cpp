@@ -16,7 +16,12 @@ Notes::Notes() {}
 
 Notes::~Notes() {}
 
-
+/**
+ * Function to call in prepare to play of pitch process
+ * @param key
+ * @param fMin : min frequency in Hz
+ * @param fMax : max frequency in Hz
+ */
 void Notes::prepare(Notes::key key, double fMin, double fMax)
 {
     freq.reserve(88);
@@ -32,6 +37,9 @@ void Notes::prepare(Notes::key key, double fMin, double fMax)
 }
 
 
+/**
+ * Build the frequency vector with frequency of given key
+ */
 void Notes::buildFreqVect()
 {
     freq.resize(0);
@@ -62,6 +70,12 @@ void Notes::buildFreqVect()
 }
 
 
+/**
+ * Return the frequency of the closest note in the given key
+ * @param pitch : current pitch in Hz
+ * @param key
+ * @return
+ */
 double Notes::getClosestFreq(const double &pitch, Notes::key key) {
     double closestFreq;
 
